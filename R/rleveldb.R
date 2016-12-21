@@ -4,10 +4,9 @@ rleveldb_connect <- function(name) {
   .Call(Crleveldb_connect, name)
 }
 
-rleveldb_get <- function(db, key, force_raw = FALSE) {
+rleveldb_get <- function(db, key, force_raw = FALSE, error_if_missing = FALSE) {
   ## assert_scalar_character_or_raw(key)
-  ## assert_scalar_logical(force_raw)
-  .Call(Crleveldb_get, db, key, force_raw)
+  .Call(Crleveldb_get, db, key, force_raw, error_if_missing)
 }
 
 rleveldb_put <- function(db, key, value) {

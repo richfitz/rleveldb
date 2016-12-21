@@ -27,11 +27,13 @@ SEXP rleveldb_connect(SEXP r_name) {
   return extPtr;
 }
 
-SEXP rleveldb_get(SEXP extptr, SEXP key, SEXP r_force_raw) {
+SEXP rleveldb_get(SEXP extptr, SEXP key, SEXP r_force_raw,
+                  SEXP r_error_if_missing) {
   leveldb_t *db = rleveldb_get_db(extptr, true);
   const char *key_data = get_key_ptr(key);
   size_t key_len = get_key_len(key);
-  bool force_raw = scalar_logical(r_force_raw);
+  bool force_raw = scalar_logical(r_force_raw),
+    error_if_missing = scalar_logical(r_error_if_missing);
 
   char *err = NULL;
   leveldb_readoptions_t *options = leveldb_readoptions_create();
@@ -39,8 +41,18 @@ SEXP rleveldb_get(SEXP extptr, SEXP key, SEXP r_force_raw) {
   char* read = leveldb_get(db, options, key_data, key_len, &read_len, &err);
   rleveldb_handle_error(err);
 
-  SEXP ret = raw_string_to_sexp(read, read_len, force_raw);
-  leveldb_free(read);
+  SEXP ret;
+  if (read != NULL) {
+    ret = raw_string_to_sexp(read, read_len, force_raw);
+    leveldb_free(read);
+  } else if (!error_if_missing) {
+    ret = R_NilValue;
+  } else if (TYPEOF(key) == STRSXP) {
+    Rf_error("Key '%s' not found in database", key_data);
+  } else {
+    Rf_error("Key not found in database");
+  }
+
   return ret;
 }
 

@@ -14,6 +14,18 @@ test_that("CRUD", {
   expect_null(rleveldb_delete(db, "foo"))
 })
 
+test_that("Get missing key", {
+  db <- rleveldb_connect(tempfile())
+  expect_null(rleveldb_get(db, "foo"))
+  expect_error(rleveldb_get(db, "foo", error_if_missing = TRUE),
+               "Key 'foo' not found in database")
+
+  k <- charToRaw("foo")
+  expect_null(rleveldb_get(db, k))
+  expect_error(rleveldb_get(db, k, error_if_missing = TRUE),
+               "Key not found in database")
+})
+
 test_that("keys", {
   db <- rleveldb_connect(tempfile())
   expect_identical(rleveldb_keys_len(db), 0L)
