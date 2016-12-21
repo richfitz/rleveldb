@@ -29,16 +29,16 @@ size_t get_data_len(SEXP data, const char* name) {
   }
 }
 
-void* get_data_ptr(SEXP data, const char* name) {
+const char* get_data_ptr(SEXP data, const char* name) {
   switch (TYPEOF(data)) {
   case STRSXP:
     if (length(data) != 1) {
       Rf_error("%s must be a scalar character", name);
     }
     SEXP str = STRING_ELT(data, 0);
-    return (void*) CHAR(str);
+    return CHAR(str);
   case RAWSXP:
-    return RAW(data);
+    return (const char*) RAW(data);
   default:
     Rf_error("Invalid data type for %s; expected string or raw", name);
   }
@@ -47,13 +47,13 @@ void* get_data_ptr(SEXP data, const char* name) {
 size_t get_key_len(SEXP key) {
   return get_data_len(key, "key");
 }
-void* get_key_ptr(SEXP key) {
+const char* get_key_ptr(SEXP key) {
   return get_data_ptr(key, "key");
 }
 size_t get_value_len(SEXP value) {
   return get_data_len(value, "value");
 }
-void* get_value_ptr(SEXP value) {
+const char* get_value_ptr(SEXP value) {
   return get_data_ptr(value, "value");
 }
 

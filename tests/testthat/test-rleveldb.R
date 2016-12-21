@@ -28,3 +28,11 @@ test_that("keys", {
   expect_null(rleveldb_delete(db, "foo"))
   expect_identical(rleveldb_keys_len(db), 0L)
 })
+
+test_that("exists", {
+  db <- rleveldb_connect(tempfile())
+  expect_false(rleveldb_exists(db, "foo"))
+  rleveldb_put(db, "foo", "bar")
+  expect_true(rleveldb_exists(db, "foo"))
+  expect_false(rleveldb_exists(db, "bar"))
+})

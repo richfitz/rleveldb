@@ -28,3 +28,8 @@ rleveldb_keys_len <- function(db) {
 rleveldb_keys <- function(db, as_raw = FALSE) {
   .Call(Crleveldb_keys, db, as_raw)
 }
+
+rleveldb_exists <- function(db, key) {
+  ## assert_scalar_character_or_raw(key)
+  .Call(Crleveldb_exists, db, key)
+}

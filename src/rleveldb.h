@@ -8,3 +8,4 @@ SEXP rleveldb_delete(SEXP extptr, SEXP key);
 
 SEXP rleveldb_keys(SEXP extptr, SEXP r_as_raw);
 SEXP rleveldb_keys_len(SEXP extptr);
+SEXP rleveldb_exists(SEXP extptr, SEXP key);

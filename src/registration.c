@@ -9,6 +9,7 @@ static const R_CallMethodDef call_methods[] = {
 
   {"Crleveldb_keys_len", (DL_FUNC) &rleveldb_keys_len, 1},
   {"Crleveldb_keys",     (DL_FUNC) &rleveldb_keys,     2},
+  {"Crleveldb_exists",   (DL_FUNC) &rleveldb_exists,   2},
 
   {NULL,                 NULL,                         0}
 };
