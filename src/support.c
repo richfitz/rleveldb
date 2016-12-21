@@ -66,7 +66,8 @@ SEXP raw_string_to_sexp(const char *str, size_t len, bool force_raw) {
     memcpy(RAW(ret), str, len);
     UNPROTECT(1);
   } else {
-    ret = PROTECT(mkString(str));
+    ret = PROTECT(allocVector(STRSXP, 1));
+    SET_STRING_ELT(ret, 0, mkCharLen(str, len));
     const size_t slen = LENGTH(STRING_ELT(ret, 0));
     if (slen < len) {
       ret = PROTECT(allocVector(RAWSXP, len));

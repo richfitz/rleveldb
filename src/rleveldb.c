@@ -177,7 +177,7 @@ leveldb_t* rleveldb_get_db(SEXP extptr, bool closed_error) {
 
 void rleveldb_handle_error(char* err) {
   if (err != NULL) {
-    size_t len = strlen(err) + 1;
+    size_t len = strlen(err);
     char * msg = (char*) R_alloc(len + 1, sizeof(char));
     memcpy(msg, err, len + 1);
     leveldb_free(err);
