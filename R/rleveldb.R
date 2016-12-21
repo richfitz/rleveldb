@@ -20,3 +20,11 @@ rleveldb_delete <- function(db, key) {
   ## assert_scalar_character_or_raw(key)
   .Call(Crleveldb_delete, db, key)
 }
+
+rleveldb_keys_len <- function(db) {
+  .Call(Crleveldb_keys_len, db)
+}
+
+rleveldb_keys <- function(db, as_raw = FALSE) {
+  .Call(Crleveldb_keys, db, as_raw)
+}

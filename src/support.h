@@ -7,3 +7,4 @@ void* get_key_ptr(SEXP key);
 size_t get_value_len(SEXP key);
 void* get_value_ptr(SEXP key);
 SEXP raw_string_to_sexp(const char *str, size_t len, bool force_raw);
+bool scalar_logical(SEXP x);

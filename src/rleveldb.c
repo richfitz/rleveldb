@@ -8,6 +8,7 @@
 leveldb_t* rleveldb_get_db(SEXP extptr, bool closed_error);
 static void rleveldb_finalize(SEXP extptr);
 void rleveldb_handle_error(char* err);
+size_t rleveldb_get_keys_len(leveldb_t *db);
 
 SEXP rleveldb_connect(SEXP r_name) {
   leveldb_options_t *options = leveldb_options_create();
@@ -27,7 +28,7 @@ SEXP rleveldb_get(SEXP extptr, SEXP key, SEXP r_force_raw) {
   leveldb_t *db = rleveldb_get_db(extptr, true);
   void *key_data = get_key_ptr(key);
   size_t key_len = get_key_len(key);
-  bool force_raw = LOGICAL(r_force_raw)[0];
+  bool force_raw = scalar_logical(r_force_raw);
 
   char *err = NULL;
   leveldb_readoptions_t *options = leveldb_readoptions_create();
@@ -66,8 +67,52 @@ SEXP rleveldb_delete(SEXP extptr, SEXP key) {
   return R_NilValue;
 }
 
-// Internal function definitions:
+// Built on top of the leveldb api:
+SEXP rleveldb_keys(SEXP extptr, SEXP r_as_raw) {
+  leveldb_t *db = rleveldb_get_db(extptr, true);
+  bool as_raw = scalar_logical(r_as_raw);
 
+  size_t n = rleveldb_get_keys_len(db);
+  SEXP ret = PROTECT(allocVector(as_raw ? VECSXP : STRSXP, n));
+
+  // TODO: at the moment this works with two passes; one computes the
+  // number of keys and the other collects the keys.  That's not a bad
+  // call, really, but it would be nice to be able to *collect*
+  // things.  To do that efficiently we need a growing data structure.
+  // It's possible that pairlists may accomplish that fairly
+  // effectively.  This is going to be needed for a "match pattern"
+  // find function, though the bigger hurdle is going to be doing any
+  // sort of actual pattern matching aside from "starts with"
+
+  leveldb_readoptions_t *options = leveldb_readoptions_create();
+  leveldb_iterator_t *it = leveldb_create_iterator(db, options);
+  leveldb_iter_seek_to_first(it);
+  size_t key_len;
+  for (size_t i = 0; i < n; ++i, leveldb_iter_next(it)) {
+    const char *key_data = leveldb_iter_key(it, &key_len);
+    if (as_raw) {
+      SET_VECTOR_ELT(ret, i, allocVector(RAWSXP, key_len));
+      memcpy(RAW(VECTOR_ELT(ret, i)), key_data, key_len);
+    } else {
+      // TODO: consider here checking that we do make a string of the
+      // correct size?  If so we can throw an error and require that
+      // bytes are used.
+      //
+      // TODO: if this throws an R error, do we leak the iterator?
+      SET_STRING_ELT(ret, i, mkCharLen(key_data, key_len));
+    }
+  }
+
+  UNPROTECT(1);
+  return ret;
+}
+
+SEXP rleveldb_keys_len(SEXP extptr) {
+  leveldb_t *db = rleveldb_get_db(extptr, true);
+  return ScalarInteger(rleveldb_get_keys_len(db));
+}
+
+// Internal function definitions:
 void rleveldb_finalize(SEXP extptr) {
   leveldb_t* db = rleveldb_get_db(extptr, false);
   if (db) {
@@ -96,4 +141,16 @@ void rleveldb_handle_error(char* err) {
     leveldb_free(err);
     Rf_error("Unhandled error; need to print this nicely");
   }
+}
+
+size_t rleveldb_get_keys_len(leveldb_t *db) {
+  leveldb_readoptions_t *options = leveldb_readoptions_create();
+  leveldb_iterator_t *it = leveldb_create_iterator(db, options);
+  size_t n = 0;
+  for (leveldb_iter_seek_to_first(it);
+       leveldb_iter_valid(it);
+       leveldb_iter_next(it)) {
+    ++n;
+  }
+  return n;
 }
