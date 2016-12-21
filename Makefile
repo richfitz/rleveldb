@@ -16,7 +16,7 @@ test_leaks: .valgrind_ignore
 	R -d 'valgrind --leak-check=full --suppressions=.valgrind_ignore' -e 'devtools::test()'
 
 .valgrind_ignore:
-	R -d 'valgrind --leak-check=full --gen-suppressions=all --log-file=$@' -e 'library(testthat)'
+	R -d 'valgrind --leak-check=full --gen-suppressions=all --log-file=$@' -e 'library(testthat); library(devtools)'
 	sed -i.bak '/^=/ d' $@
 	rm -f $@.bak
 

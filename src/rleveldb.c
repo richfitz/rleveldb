@@ -19,6 +19,7 @@ SEXP rleveldb_connect(SEXP r_name) {
   char *err = NULL;
   const char *name = CHAR(STRING_ELT(r_name, 0));
   leveldb_t *db = leveldb_open(options, name, &err);
+  leveldb_free(options);
   rleveldb_handle_error(err);
 
   SEXP extPtr = PROTECT(R_MakeExternalPtr(db, r_name, R_NilValue));
@@ -43,6 +44,7 @@ SEXP rleveldb_destroy(SEXP r_name) {
   char *err = NULL;
   const char *name = CHAR(STRING_ELT(r_name, 0));
   leveldb_destroy_db(options, name, &err);
+  leveldb_free(options);
   rleveldb_handle_error(err);
   return ScalarLogical(true);
 }
@@ -59,6 +61,7 @@ SEXP rleveldb_get(SEXP extptr, SEXP key, SEXP r_force_raw,
   leveldb_readoptions_t *options = leveldb_readoptions_create();
   size_t read_len;
   char* read = leveldb_get(db, options, key_data, key_len, &read_len, &err);
+  leveldb_free(options);
   rleveldb_handle_error(err);
 
   SEXP ret;
@@ -84,6 +87,7 @@ SEXP rleveldb_put(SEXP extptr, SEXP key, SEXP value) {
   char *err = NULL;
   leveldb_writeoptions_t *options = leveldb_writeoptions_create();
   leveldb_put(db, options, key_data, key_len, value_data, value_len, &err);
+  leveldb_free(options);
   rleveldb_handle_error(err);
 
   return R_NilValue;
@@ -97,6 +101,7 @@ SEXP rleveldb_delete(SEXP extptr, SEXP key) {
   char *err = NULL;
   leveldb_writeoptions_t *options = leveldb_writeoptions_create();
   leveldb_delete(db, options, key_data, key_len, &err);
+  leveldb_free(options);
   rleveldb_handle_error(err);
 
   return R_NilValue;
@@ -121,6 +126,7 @@ SEXP rleveldb_keys(SEXP extptr, SEXP r_as_raw) {
 
   leveldb_readoptions_t *options = leveldb_readoptions_create();
   leveldb_iterator_t *it = leveldb_create_iterator(db, options);
+  leveldb_free(options);
   leveldb_iter_seek_to_first(it);
   size_t key_len;
   for (size_t i = 0; i < n; ++i, leveldb_iter_next(it)) {
@@ -133,10 +139,13 @@ SEXP rleveldb_keys(SEXP extptr, SEXP r_as_raw) {
       // correct size?  If so we can throw an error and require that
       // bytes are used.
       //
-      // TODO: if this throws an R error, do we leak the iterator?
+      // TODO: if this throws an R error, we leak iterators.  It would
+      // be nice to put a wrapper around the iterator (creating a
+      // reference) so that R will clean it up for us later.
       SET_STRING_ELT(ret, i, mkCharLen(key_data, key_len));
     }
   }
+  leveldb_iter_destroy(it);
 
   UNPROTECT(1);
   return ret;
@@ -188,18 +197,21 @@ void rleveldb_handle_error(char* err) {
 size_t rleveldb_get_keys_len(leveldb_t *db) {
   leveldb_readoptions_t *options = leveldb_readoptions_create();
   leveldb_iterator_t *it = leveldb_create_iterator(db, options);
+  leveldb_free(options);
   size_t n = 0;
   for (leveldb_iter_seek_to_first(it);
        leveldb_iter_valid(it);
        leveldb_iter_next(it)) {
     ++n;
   }
+  leveldb_iter_destroy(it);
   return n;
 }
 
 bool rleveldb_get_exists(leveldb_t *db, const char *key_data, size_t key_len) {
   leveldb_readoptions_t *options = leveldb_readoptions_create();
   leveldb_iterator_t *it = leveldb_create_iterator(db, options);
+  leveldb_free(options);
   leveldb_iter_seek(it, key_data, key_len);
 
   bool found = false;
