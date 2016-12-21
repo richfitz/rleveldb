@@ -1,5 +1,29 @@
 context("rleveldb")
 
+test_that("open, close", {
+  db <- rleveldb_connect(tempfile())
+  expect_true(rleveldb_close(db))
+  expect_false(rleveldb_close(db))
+  expect_error(rleveldb_close(db, TRUE),
+               "leveldb handle is not open")
+  rm(db)
+  gc()
+})
+
+test_that("destroy", {
+  path <- tempfile()
+  db <- rleveldb_connect(path)
+  expect_identical(rleveldb_keys_len(db), 0L)
+
+  expect_error(rleveldb_destroy(path), "IO error: lock")
+  rleveldb_close(db)
+  expect_true(rleveldb_destroy(path))
+  expect_false(file.exists(path))
+  expect_true(rleveldb_destroy(path))
+  rm(db)
+  gc()
+})
+
 test_that("CRUD", {
   db <- rleveldb_connect(tempfile())
 

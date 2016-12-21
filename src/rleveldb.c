@@ -27,6 +27,26 @@ SEXP rleveldb_connect(SEXP r_name) {
   return extPtr;
 }
 
+SEXP rleveldb_close(SEXP extptr, SEXP r_error_if_closed) {
+  leveldb_t *db = rleveldb_get_db(extptr, scalar_logical(r_error_if_closed));
+  if (db != NULL) {
+    leveldb_close(db);
+    R_ClearExternalPtr(extptr);
+  }
+  return ScalarLogical(db != NULL);
+}
+
+SEXP rleveldb_destroy(SEXP r_name) {
+  // TODO: on error, does leveldb_options_create cause a leak?
+  leveldb_options_t *options = leveldb_options_create();
+  leveldb_options_set_create_if_missing(options, 0);
+  char *err = NULL;
+  const char *name = CHAR(STRING_ELT(r_name, 0));
+  leveldb_destroy_db(options, name, &err);
+  rleveldb_handle_error(err);
+  return ScalarLogical(true);
+}
+
 SEXP rleveldb_get(SEXP extptr, SEXP key, SEXP r_force_raw,
                   SEXP r_error_if_missing) {
   leveldb_t *db = rleveldb_get_db(extptr, true);
@@ -150,18 +170,18 @@ leveldb_t* rleveldb_get_db(SEXP extptr, bool closed_error) {
   }
   db = (leveldb_t*) R_ExternalPtrAddr(extptr);
   if (!db && closed_error) {
-    Rf_error("Db is not connected");
+    Rf_error("leveldb handle is not open; can't connect");
   }
   return (leveldb_t*) db;
 }
 
 void rleveldb_handle_error(char* err) {
   if (err != NULL) {
-    // Here, with the help of valgrind, work out how to get the error
-    // string here safely into the actual guts of the error() call.
-    REprintf("%s\n", err);
+    size_t len = strlen(err) + 1;
+    char * msg = (char*) R_alloc(len + 1, sizeof(char));
+    memcpy(msg, err, len + 1);
     leveldb_free(err);
-    Rf_error("Unhandled error; need to print this nicely");
+    error(msg);
   }
 }
 
