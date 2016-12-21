@@ -1,10 +1,10 @@
 context("rleveldb")
 
 test_that("open, close", {
-  db <- rleveldb_connect(tempfile())
-  expect_true(rleveldb_close(db))
-  expect_false(rleveldb_close(db))
-  expect_error(rleveldb_close(db, TRUE),
+  db <- leveldb_connect(tempfile())
+  expect_true(leveldb_close(db))
+  expect_false(leveldb_close(db))
+  expect_error(leveldb_close(db, TRUE),
                "leveldb handle is not open")
   rm(db)
   gc()
@@ -12,63 +12,63 @@ test_that("open, close", {
 
 test_that("destroy", {
   path <- tempfile()
-  db <- rleveldb_connect(path)
-  expect_identical(rleveldb_keys_len(db), 0L)
+  db <- leveldb_connect(path)
+  expect_identical(leveldb_keys_len(db), 0L)
 
-  expect_error(rleveldb_destroy(path), "IO error: lock")
-  rleveldb_close(db)
-  expect_true(rleveldb_destroy(path))
+  expect_error(leveldb_destroy(path), "IO error: lock")
+  leveldb_close(db)
+  expect_true(leveldb_destroy(path))
   expect_false(file.exists(path))
-  expect_true(rleveldb_destroy(path))
+  expect_true(leveldb_destroy(path))
   rm(db)
   gc()
 })
 
 test_that("CRUD", {
-  db <- rleveldb_connect(tempfile())
+  db <- leveldb_connect(tempfile())
 
-  rleveldb_put(db, "foo", "bar")
-  expect_equal(rleveldb_get(db, "foo"), "bar")
-  expect_identical(rleveldb_keys_len(db), 1L)
+  leveldb_put(db, "foo", "bar")
+  expect_equal(leveldb_get(db, "foo"), "bar")
+  expect_identical(leveldb_keys_len(db), 1L)
 
-  rleveldb_put(db, "foo", charToRaw("barbar"))
-  expect_equal(rleveldb_get(db, "foo"), "barbar")
-  expect_equal(rleveldb_get(db, "foo", TRUE), charToRaw("barbar"))
+  leveldb_put(db, "foo", charToRaw("barbar"))
+  expect_equal(leveldb_get(db, "foo"), "barbar")
+  expect_equal(leveldb_get(db, "foo", TRUE), charToRaw("barbar"))
 
-  expect_null(rleveldb_delete(db, "foo"))
+  expect_null(leveldb_delete(db, "foo"))
 })
 
 test_that("Get missing key", {
-  db <- rleveldb_connect(tempfile())
-  expect_null(rleveldb_get(db, "foo"))
-  expect_error(rleveldb_get(db, "foo", error_if_missing = TRUE),
+  db <- leveldb_connect(tempfile())
+  expect_null(leveldb_get(db, "foo"))
+  expect_error(leveldb_get(db, "foo", error_if_missing = TRUE),
                "Key 'foo' not found in database")
 
   k <- charToRaw("foo")
-  expect_null(rleveldb_get(db, k))
-  expect_error(rleveldb_get(db, k, error_if_missing = TRUE),
+  expect_null(leveldb_get(db, k))
+  expect_error(leveldb_get(db, k, error_if_missing = TRUE),
                "Key not found in database")
 })
 
 test_that("keys", {
-  db <- rleveldb_connect(tempfile())
-  expect_identical(rleveldb_keys_len(db), 0L)
-  expect_identical(rleveldb_keys(db, TRUE), list())
-  expect_identical(rleveldb_keys(db, FALSE), character(0))
+  db <- leveldb_connect(tempfile())
+  expect_identical(leveldb_keys_len(db), 0L)
+  expect_identical(leveldb_keys(db, TRUE), list())
+  expect_identical(leveldb_keys(db, FALSE), character(0))
 
-  rleveldb_put(db, "foo", "bar")
-  expect_identical(rleveldb_keys_len(db), 1L)
-  expect_equal(rleveldb_keys(db, TRUE), list(charToRaw("foo")))
-  expect_equal(rleveldb_keys(db, FALSE), "foo")
+  leveldb_put(db, "foo", "bar")
+  expect_identical(leveldb_keys_len(db), 1L)
+  expect_equal(leveldb_keys(db, TRUE), list(charToRaw("foo")))
+  expect_equal(leveldb_keys(db, FALSE), "foo")
 
-  expect_null(rleveldb_delete(db, "foo"))
-  expect_identical(rleveldb_keys_len(db), 0L)
+  expect_null(leveldb_delete(db, "foo"))
+  expect_identical(leveldb_keys_len(db), 0L)
 })
 
 test_that("exists", {
-  db <- rleveldb_connect(tempfile())
-  expect_false(rleveldb_exists(db, "foo"))
-  rleveldb_put(db, "foo", "bar")
-  expect_true(rleveldb_exists(db, "foo"))
-  expect_false(rleveldb_exists(db, "bar"))
+  db <- leveldb_connect(tempfile())
+  expect_false(leveldb_exists(db, "foo"))
+  leveldb_put(db, "foo", "bar")
+  expect_true(leveldb_exists(db, "foo"))
+  expect_false(leveldb_exists(db, "bar"))
 })
