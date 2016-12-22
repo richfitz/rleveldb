@@ -67,12 +67,12 @@ leveldb_iter_seek <- function(it, key) {
   .Call(Crleveldb_iter_seek, it, key)
 }
 
-leveldb_iter_next <- function(it) {
-  .Call(Crleveldb_iter_next, it)
+leveldb_iter_next <- function(it, error_if_invalid = FALSE) {
+  .Call(Crleveldb_iter_next, it, error_if_invalid)
 }
 
-leveldb_iter_prev <- function(it) {
-  .Call(Crleveldb_iter_prev, it)
+leveldb_iter_prev <- function(it, error_if_invalid = FALSE) {
+  .Call(Crleveldb_iter_prev, it, error_if_invalid)
 }
 
 leveldb_iter_key <- function(it, force_raw = FALSE, error_if_invalid = FALSE) {

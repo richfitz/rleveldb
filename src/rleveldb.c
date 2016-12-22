@@ -17,6 +17,8 @@ leveldb_readoptions_t* rleveldb_get_readoptions(SEXP r_readoptions,
                                                 bool closed_error);
 leveldb_writeoptions_t* rleveldb_get_writeoptions(SEXP r_writeoptions,
                                                   bool closed_error);
+bool check_iterator(leveldb_iterator_t *it, SEXP r_error_if_invalid);
+
 
 // Finalisers
 static void rleveldb_finalize(SEXP r_db);
@@ -193,8 +195,7 @@ SEXP rleveldb_iter_create(SEXP r_db, SEXP r_readoptions) {
     rleveldb_get_readoptions(r_readoptions, true);
   leveldb_iterator_t *it = leveldb_create_iterator(db, readoptions);
 
-  // TODO: Consider using r_db as the tag here?
-  SEXP r_it = PROTECT(R_MakeExternalPtr(it, R_NilValue, R_NilValue));
+  SEXP r_it = PROTECT(R_MakeExternalPtr(it, r_db, R_NilValue));
   R_RegisterCFinalizer(r_it, rleveldb_iter_finalize);
   UNPROTECT(1);
   return r_it;
@@ -235,29 +236,28 @@ SEXP rleveldb_iter_seek(SEXP r_it, SEXP r_key) {
   return R_NilValue;
 }
 
-SEXP rleveldb_iter_next(SEXP r_it) {
+SEXP rleveldb_iter_next(SEXP r_it, SEXP r_error_if_invalid) {
   leveldb_iterator_t *it = rleveldb_get_iterator(r_it, true);
-  leveldb_iter_next(it);
+  if (check_iterator(it, r_error_if_invalid)) {
+    leveldb_iter_next(it);
+  }
   return R_NilValue;
 }
 
-SEXP rleveldb_iter_prev(SEXP r_it) {
+SEXP rleveldb_iter_prev(SEXP r_it, SEXP r_error_if_invalid) {
   leveldb_iterator_t *it = rleveldb_get_iterator(r_it, true);
-  leveldb_iter_prev(it);
+  if (check_iterator(it, r_error_if_invalid)) {
+    leveldb_iter_prev(it);
+  }
   return R_NilValue;
 }
 
 SEXP rleveldb_iter_key(SEXP r_it, SEXP r_force_raw, SEXP r_error_if_invalid) {
   leveldb_iterator_t *it = rleveldb_get_iterator(r_it, true);
-  bool force_raw = scalar_logical(r_force_raw),
-    error_if_invalid = scalar_logical(r_error_if_invalid);
+  bool force_raw = scalar_logical(r_force_raw);
   size_t len;
-  if (!leveldb_iter_valid(it)) {
-    if (error_if_invalid) {
-      Rf_error("Iterator is not valid");
-    } else {
-      return R_NilValue;
-    }
+  if (!check_iterator(it, r_error_if_invalid)) {
+    return R_NilValue;
   }
   const char *data = leveldb_iter_key(it, &len);
   return raw_string_to_sexp(data, len, force_raw);
@@ -265,14 +265,9 @@ SEXP rleveldb_iter_key(SEXP r_it, SEXP r_force_raw, SEXP r_error_if_invalid) {
 
 SEXP rleveldb_iter_value(SEXP r_it, SEXP r_force_raw, SEXP r_error_if_invalid) {
   leveldb_iterator_t *it = rleveldb_get_iterator(r_it, true);
-  bool force_raw = scalar_logical(r_force_raw),
-    error_if_invalid = scalar_logical(r_error_if_invalid);
-  if (!leveldb_iter_valid(it)) {
-    if (error_if_invalid) {
-      Rf_error("Iterator is not valid");
-    } else {
-      return R_NilValue;
-    }
+  bool force_raw = scalar_logical(r_force_raw);
+  if (!check_iterator(it, r_error_if_invalid)) {
+    return R_NilValue;
   }
   size_t len;
   const char *data = leveldb_iter_value(it, &len);
@@ -542,7 +537,7 @@ SEXP rleveldb_version() {
 // Internal function definitions:
 void rleveldb_finalize(SEXP r_db) {
   leveldb_t* db = rleveldb_get_db(r_db, false);
-  if (db) {
+  if (db != NULL) {
     leveldb_close(db);
     R_ClearExternalPtr(r_db);
   }
@@ -550,7 +545,7 @@ void rleveldb_finalize(SEXP r_db) {
 
 void rleveldb_iter_finalize(SEXP r_it) {
   leveldb_iterator_t* it = rleveldb_get_iterator(r_it, false);
-  if (it) {
+  if (it != NULL) {
     leveldb_iter_destroy(it);
     R_ClearExternalPtr(r_it);
   }
@@ -558,7 +553,7 @@ void rleveldb_iter_finalize(SEXP r_it) {
 
 void rleveldb_snapshot_finalize(SEXP r_snapshot) {
   leveldb_snapshot_t* snapshot = rleveldb_get_snapshot(r_snapshot, false);
-  if (snapshot) {
+  if (snapshot != NULL) {
     leveldb_t *db = rleveldb_get_db(R_ExternalPtrTag(r_snapshot), false);
     if (db) {
       leveldb_release_snapshot(db, snapshot);
@@ -771,6 +766,16 @@ leveldb_options_t* rleveldb_collect_options(SEXP r_create_if_missing,
   }
 
   return options;
+}
+
+bool check_iterator(leveldb_iterator_t *it, SEXP r_error_if_invalid) {
+  bool valid = leveldb_iter_valid(it);
+  if (!valid) {
+    if (scalar_logical(r_error_if_invalid)) {
+      Rf_error("Iterator is not valid");
+    }
+  }
+  return valid;
 }
 
 leveldb_readoptions_t * default_readoptions = NULL;

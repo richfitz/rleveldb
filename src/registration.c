@@ -19,8 +19,8 @@ static const R_CallMethodDef call_methods[] = {
   {"Crleveldb_iter_seek_to_first", (DL_FUNC) &rleveldb_iter_seek_to_first, 1},
   {"Crleveldb_iter_seek_to_last",  (DL_FUNC) &rleveldb_iter_seek_to_last,  1},
   {"Crleveldb_iter_seek",          (DL_FUNC) &rleveldb_iter_seek,          2},
-  {"Crleveldb_iter_next",          (DL_FUNC) &rleveldb_iter_next,          1},
-  {"Crleveldb_iter_prev",          (DL_FUNC) &rleveldb_iter_prev,          1},
+  {"Crleveldb_iter_next",          (DL_FUNC) &rleveldb_iter_next,          2},
+  {"Crleveldb_iter_prev",          (DL_FUNC) &rleveldb_iter_prev,          2},
   {"Crleveldb_iter_key",           (DL_FUNC) &rleveldb_iter_key,           3},
   {"Crleveldb_iter_value",         (DL_FUNC) &rleveldb_iter_value,         3},
 
