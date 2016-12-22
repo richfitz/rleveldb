@@ -82,3 +82,9 @@ leveldb_exists <- function(db, key) {
   ## assert_scalar_character_or_raw(key)
   .Call(Crleveldb_exists, db, key)
 }
+
+leveldb_version <- function() {
+  ret <- list(.Call(Crleveldb_version))
+  class(ret) <- "numeric_version"
+  ret
+}

@@ -258,6 +258,14 @@ SEXP rleveldb_exists(SEXP r_db, SEXP r_key) {
   return ScalarLogical(rleveldb_get_exists(db, key_data, key_len));
 }
 
+SEXP rleveldb_version() {
+  SEXP ret = PROTECT(allocVector(INTSXP, 2));
+  INTEGER(ret)[0] = leveldb_major_version();
+  INTEGER(ret)[1] = leveldb_minor_version();
+  UNPROTECT(1);
+  return ret;
+}
+
 // Internal function definitions:
 void rleveldb_finalize(SEXP r_db) {
   leveldb_t* db = rleveldb_get_db(r_db, false);

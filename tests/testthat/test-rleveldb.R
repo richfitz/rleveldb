@@ -97,3 +97,10 @@ test_that("exists", {
   expect_true(leveldb_exists(db, "foo"))
   expect_false(leveldb_exists(db, "bar"))
 })
+
+test_that("version", {
+  v <- leveldb_version()
+  expect_is(v, "numeric_version")
+  expect_equal(length(v), 1L)
+  expect_equal(length(unclass(v)[[1L]]), 2L)
+})
