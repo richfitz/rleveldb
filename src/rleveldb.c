@@ -4,11 +4,26 @@
 #include <leveldb/c.h>
 #include "support.h"
 
+leveldb_readoptions_t * default_readoptions;
+leveldb_writeoptions_t * default_writeoptions;
+
 // Internals:
 leveldb_t* rleveldb_get_db(SEXP r_db, bool closed_error);
 leveldb_iterator_t* rleveldb_get_iterator(SEXP r_it, bool closed_error);
+leveldb_snapshot_t* rleveldb_get_snapshot(SEXP r_snapshot, bool closed_error);
+leveldb_readoptions_t* rleveldb_get_readoptions(SEXP r_readoptions,
+                                                bool closed_error);
+leveldb_writeoptions_t* rleveldb_get_writeoptions(SEXP r_writeoptions,
+                                                  bool closed_error);
+
+// Finalisers
 static void rleveldb_finalize(SEXP r_db);
-static void rleveldb_iter_finalize(SEXP r_db);
+static void rleveldb_iter_finalize(SEXP r_it);
+static void rleveldb_snapshot_finalize(SEXP r_snapshot);
+static void rleveldb_readoptions_finalize(SEXP r_readoptions);
+static void rleveldb_writeoptions_finalize(SEXP r_writeoptions);
+
+// Other internals
 void rleveldb_handle_error(char* err);
 leveldb_options_t* rleveldb_collect_options(SEXP r_create_if_missing,
                                             SEXP r_error_if_exists,
@@ -20,8 +35,9 @@ leveldb_options_t* rleveldb_collect_options(SEXP r_create_if_missing,
                                             SEXP r_use_compression,
                                             SEXP r_bloom_filter_bits_per_key);
 // Slightly different
-size_t rleveldb_get_keys_len(leveldb_t *db);
-bool rleveldb_get_exists(leveldb_t *db, const char *key_data, size_t key_len);
+size_t rleveldb_get_keys_len(leveldb_t *db, leveldb_readoptions_t *readoptions);
+bool rleveldb_get_exists(leveldb_t *db, const char *key_data, size_t key_len,
+                         leveldb_readoptions_t *readoptions);
 
 // Implementations:
 SEXP rleveldb_connect(SEXP r_name,
@@ -80,18 +96,18 @@ SEXP rleveldb_destroy(SEXP r_name) {
 }
 
 SEXP rleveldb_get(SEXP r_db, SEXP r_key, SEXP r_force_raw,
-                  SEXP r_error_if_missing) {
+                  SEXP r_error_if_missing, SEXP r_readoptions) {
   leveldb_t *db = rleveldb_get_db(r_db, true);
   const char *key_data = get_key_ptr(r_key);
   size_t key_len = get_key_len(r_key);
   bool force_raw = scalar_logical(r_force_raw),
     error_if_missing = scalar_logical(r_error_if_missing);
+  leveldb_readoptions_t *readoptions =
+    rleveldb_get_readoptions(r_readoptions, true);
 
   char *err = NULL;
-  leveldb_readoptions_t *options = leveldb_readoptions_create();
   size_t read_len;
-  char* read = leveldb_get(db, options, key_data, key_len, &read_len, &err);
-  leveldb_free(options);
+  char* read = leveldb_get(db, readoptions, key_data, key_len, &read_len, &err);
   rleveldb_handle_error(err);
 
   SEXP ret;
@@ -109,40 +125,41 @@ SEXP rleveldb_get(SEXP r_db, SEXP r_key, SEXP r_force_raw,
   return ret;
 }
 
-SEXP rleveldb_put(SEXP r_db, SEXP r_key, SEXP r_value) {
+SEXP rleveldb_put(SEXP r_db, SEXP r_key, SEXP r_value, SEXP r_writeoptions) {
   leveldb_t *db = rleveldb_get_db(r_db, true);
   const char *key_data = get_key_ptr(r_key),
     *value_data = get_value_ptr(r_value);
   size_t key_len = get_key_len(r_key), value_len = get_value_len(r_value);
+  leveldb_writeoptions_t *writeoptions =
+    rleveldb_get_writeoptions(r_writeoptions, true);
 
   char *err = NULL;
-  leveldb_writeoptions_t *options = leveldb_writeoptions_create();
-  leveldb_put(db, options, key_data, key_len, value_data, value_len, &err);
-  leveldb_free(options);
+  leveldb_put(db, writeoptions, key_data, key_len, value_data, value_len, &err);
   rleveldb_handle_error(err);
 
   return R_NilValue;
 }
 
-SEXP rleveldb_delete(SEXP r_db, SEXP r_key) {
+SEXP rleveldb_delete(SEXP r_db, SEXP r_key, SEXP r_writeoptions) {
   leveldb_t *db = rleveldb_get_db(r_db, true);
   const char *key_data = get_key_ptr(r_key);
   size_t key_len = get_key_len(r_key);
+  leveldb_writeoptions_t *writeoptions =
+    rleveldb_get_writeoptions(r_writeoptions, true);
 
   char *err = NULL;
-  leveldb_writeoptions_t *options = leveldb_writeoptions_create();
-  leveldb_delete(db, options, key_data, key_len, &err);
-  leveldb_free(options);
+  leveldb_delete(db, writeoptions, key_data, key_len, &err);
   rleveldb_handle_error(err);
 
   return R_NilValue;
 }
 
 // Iterators
-SEXP rleveldb_iter_create(SEXP r_db) {
+SEXP rleveldb_iter_create(SEXP r_db, SEXP r_readoptions) {
   leveldb_t *db = rleveldb_get_db(r_db, true);
-  leveldb_readoptions_t *options = leveldb_readoptions_create();
-  leveldb_iterator_t *it = leveldb_create_iterator(db, options);
+  leveldb_readoptions_t *readoptions =
+    rleveldb_get_readoptions(r_readoptions, true);
+  leveldb_iterator_t *it = leveldb_create_iterator(db, readoptions);
 
   // TODO: Consider using r_db as the tag here?
   SEXP r_it = PROTECT(R_MakeExternalPtr(it, R_NilValue, R_NilValue));
@@ -230,12 +247,76 @@ SEXP rleveldb_iter_value(SEXP r_it, SEXP r_force_raw, SEXP r_error_if_invalid) {
   return raw_string_to_sexp(data, len, force_raw);
 }
 
+// Snapshots
+SEXP rleveldb_snapshot_create(SEXP r_db) {
+  leveldb_t *db = rleveldb_get_db(r_db, true);
+  const leveldb_snapshot_t *snapshot = leveldb_create_snapshot(db);
+  SEXP r_snapshot =
+    PROTECT(R_MakeExternalPtr((void*) snapshot, r_db, R_NilValue));
+  R_RegisterCFinalizer(r_snapshot, rleveldb_snapshot_finalize);
+  UNPROTECT(1);
+  return r_snapshot;
+}
+
+SEXP rleveldb_snapshot_release(SEXP r_snapshot, SEXP r_error_if_released) {
+  bool error_if_relased = scalar_logical(r_error_if_released);
+  const leveldb_snapshot_t *snapshot =
+    rleveldb_get_snapshot(r_snapshot, error_if_relased);
+  if (snapshot != NULL) {
+    leveldb_t *db = rleveldb_get_db(R_ExternalPtrTag(r_snapshot), true);
+    leveldb_release_snapshot(db, snapshot);
+    R_ClearExternalPtr(r_snapshot);
+  }
+  return ScalarLogical(snapshot != NULL);
+}
+
+// Options
+SEXP rleveldb_readoptions(SEXP r_verify_checksums, SEXP r_fill_cache,
+                          SEXP r_snapshot) {
+  leveldb_readoptions_t * options = leveldb_readoptions_create();
+  SEXP tag = PROTECT(allocVector(VECSXP, 3));
+  SET_VECTOR_ELT(tag, 0, r_verify_checksums);
+  SET_VECTOR_ELT(tag, 1, r_fill_cache);
+  SET_VECTOR_ELT(tag, 2, r_snapshot);
+  SEXP ret = PROTECT(R_MakeExternalPtr(options, tag, R_NilValue));
+  R_RegisterCFinalizer(ret, rleveldb_readoptions_finalize);
+  if (r_verify_checksums != R_NilValue) {
+    bool verify_checksums = scalar_logical(r_verify_checksums);
+    leveldb_readoptions_set_verify_checksums(options, verify_checksums);
+  }
+  if (r_fill_cache != R_NilValue) {
+    leveldb_readoptions_set_fill_cache(options, scalar_logical(r_fill_cache));
+  }
+  if (r_snapshot != R_NilValue) {
+    leveldb_readoptions_set_snapshot(options,
+                                     rleveldb_get_snapshot(r_snapshot, true));
+  }
+
+  UNPROTECT(2);
+  return ret;
+}
+
+SEXP rleveldb_writeoptions(SEXP r_sync) {
+  leveldb_writeoptions_t * options = leveldb_writeoptions_create();
+  SEXP tag = PROTECT(allocVector(VECSXP, 1));
+  SET_VECTOR_ELT(tag, 0, r_sync);
+  SEXP ret = PROTECT(R_MakeExternalPtr(options, tag, R_NilValue));
+  R_RegisterCFinalizer(ret, rleveldb_writeoptions_finalize);
+  if (r_sync != R_NilValue) {
+    leveldb_writeoptions_set_sync(options, scalar_logical(r_sync));
+  }
+  UNPROTECT(2);
+  return ret;
+}
+
 // Built on top of the leveldb api:
-SEXP rleveldb_keys(SEXP r_db, SEXP r_as_raw) {
+SEXP rleveldb_keys(SEXP r_db, SEXP r_as_raw, SEXP r_readoptions) {
   leveldb_t *db = rleveldb_get_db(r_db, true);
   bool as_raw = scalar_logical(r_as_raw);
+  leveldb_readoptions_t *readoptions =
+    rleveldb_get_readoptions(r_readoptions, true);
 
-  size_t n = rleveldb_get_keys_len(db);
+  size_t n = rleveldb_get_keys_len(db, readoptions);
   SEXP ret = PROTECT(allocVector(as_raw ? VECSXP : STRSXP, n));
 
   // TODO: at the moment this works with two passes; one computes the
@@ -247,9 +328,7 @@ SEXP rleveldb_keys(SEXP r_db, SEXP r_as_raw) {
   // find function, though the bigger hurdle is going to be doing any
   // sort of actual pattern matching aside from "starts with"
 
-  leveldb_readoptions_t *options = leveldb_readoptions_create();
-  leveldb_iterator_t *it = leveldb_create_iterator(db, options);
-  leveldb_free(options);
+  leveldb_iterator_t *it = leveldb_create_iterator(db, readoptions);
   leveldb_iter_seek_to_first(it);
   size_t key_len;
   for (size_t i = 0; i < n; ++i, leveldb_iter_next(it)) {
@@ -274,16 +353,20 @@ SEXP rleveldb_keys(SEXP r_db, SEXP r_as_raw) {
   return ret;
 }
 
-SEXP rleveldb_keys_len(SEXP r_db) {
+SEXP rleveldb_keys_len(SEXP r_db, SEXP r_readoptions) {
   leveldb_t *db = rleveldb_get_db(r_db, true);
-  return ScalarInteger(rleveldb_get_keys_len(db));
+  leveldb_readoptions_t *readoptions =
+    rleveldb_get_readoptions(r_readoptions, true);
+  return ScalarInteger(rleveldb_get_keys_len(db, readoptions));
 }
 
-SEXP rleveldb_exists(SEXP r_db, SEXP r_key) {
+SEXP rleveldb_exists(SEXP r_db, SEXP r_key, SEXP r_readoptions) {
   leveldb_t *db = rleveldb_get_db(r_db, true);
   const char *key_data = get_key_ptr(r_key);
   size_t key_len = get_key_len(r_key);
-  return ScalarLogical(rleveldb_get_exists(db, key_data, key_len));
+  leveldb_readoptions_t *readoptions =
+    rleveldb_get_readoptions(r_readoptions, true);
+  return ScalarLogical(rleveldb_get_exists(db, key_data, key_len, readoptions));
 }
 
 SEXP rleveldb_version() {
@@ -308,6 +391,35 @@ void rleveldb_iter_finalize(SEXP r_it) {
   if (it) {
     leveldb_iter_destroy(it);
     R_ClearExternalPtr(r_it);
+  }
+}
+
+void rleveldb_snapshot_finalize(SEXP r_snapshot) {
+  leveldb_snapshot_t* snapshot = rleveldb_get_snapshot(r_snapshot, false);
+  if (snapshot) {
+    leveldb_t *db = rleveldb_get_db(R_ExternalPtrTag(r_snapshot), false);
+    if (db) {
+      leveldb_release_snapshot(db, snapshot);
+    }
+    R_ClearExternalPtr(r_snapshot);
+  }
+}
+
+void rleveldb_readoptions_finalize(SEXP r_readoptions) {
+  leveldb_readoptions_t* readoptions =
+    rleveldb_get_readoptions(r_readoptions, false);
+  if (readoptions) {
+    leveldb_readoptions_destroy(readoptions);
+    R_ClearExternalPtr(r_readoptions);
+  }
+}
+
+void rleveldb_writeoptions_finalize(SEXP r_writeoptions) {
+  leveldb_writeoptions_t* writeoptions =
+    rleveldb_get_writeoptions(r_writeoptions, false);
+  if (writeoptions) {
+    leveldb_writeoptions_destroy(writeoptions);
+    R_ClearExternalPtr(r_writeoptions);
   }
 }
 
@@ -337,6 +449,50 @@ leveldb_iterator_t* rleveldb_get_iterator(SEXP r_it, bool closed_error) {
   return (leveldb_iterator_t*) it;
 }
 
+leveldb_snapshot_t* rleveldb_get_snapshot(SEXP r_snapshot, bool closed_error) {
+  void *snapshot = NULL;
+  if (TYPEOF(r_snapshot) != EXTPTRSXP) {
+    Rf_error("Expected an external pointer");
+  }
+  snapshot = (leveldb_snapshot_t*) R_ExternalPtrAddr(r_snapshot);
+  if (!snapshot && closed_error) {
+    Rf_error("leveldb snapshot is not open; can't connect");
+  }
+  return (leveldb_snapshot_t*) snapshot;
+}
+
+leveldb_readoptions_t* rleveldb_get_readoptions(SEXP r_readoptions,
+                                                bool closed_error) {
+  if (r_readoptions == R_NilValue) {
+    return default_readoptions;
+  }
+  void *readoptions = NULL;
+  if (TYPEOF(r_readoptions) != EXTPTRSXP) {
+    Rf_error("Expected an external pointer");
+  }
+  readoptions = (leveldb_readoptions_t*) R_ExternalPtrAddr(r_readoptions);
+  if (!readoptions && closed_error) {
+    Rf_error("leveldb readoptions is not open; can't connect");
+  }
+  return (leveldb_readoptions_t*) readoptions;
+}
+
+leveldb_writeoptions_t* rleveldb_get_writeoptions(SEXP r_writeoptions,
+                                                  bool closed_error) {
+  if (r_writeoptions == R_NilValue) {
+    return default_writeoptions;
+  }
+  void *writeoptions = NULL;
+  if (TYPEOF(r_writeoptions) != EXTPTRSXP) {
+    Rf_error("Expected an external pointer");
+  }
+  writeoptions = (leveldb_writeoptions_t*) R_ExternalPtrAddr(r_writeoptions);
+  if (!writeoptions && closed_error) {
+    Rf_error("leveldb writeoptions is not open; can't connect");
+  }
+  return (leveldb_writeoptions_t*) writeoptions;
+}
+
 void rleveldb_handle_error(char* err) {
   if (err != NULL) {
     size_t len = strlen(err);
@@ -347,10 +503,9 @@ void rleveldb_handle_error(char* err) {
   }
 }
 
-size_t rleveldb_get_keys_len(leveldb_t *db) {
-  leveldb_readoptions_t *options = leveldb_readoptions_create();
-  leveldb_iterator_t *it = leveldb_create_iterator(db, options);
-  leveldb_free(options);
+size_t rleveldb_get_keys_len(leveldb_t *db,
+                             leveldb_readoptions_t *readoptions) {
+  leveldb_iterator_t *it = leveldb_create_iterator(db, readoptions);
   size_t n = 0;
   for (leveldb_iter_seek_to_first(it);
        leveldb_iter_valid(it);
@@ -361,10 +516,9 @@ size_t rleveldb_get_keys_len(leveldb_t *db) {
   return n;
 }
 
-bool rleveldb_get_exists(leveldb_t *db, const char *key_data, size_t key_len) {
-  leveldb_readoptions_t *options = leveldb_readoptions_create();
-  leveldb_iterator_t *it = leveldb_create_iterator(db, options);
-  leveldb_free(options);
+bool rleveldb_get_exists(leveldb_t *db, const char *key_data, size_t key_len,
+                         leveldb_readoptions_t *readoptions) {
+  leveldb_iterator_t *it = leveldb_create_iterator(db, readoptions);
   leveldb_iter_seek(it, key_data, key_len);
 
   bool found = false;
@@ -435,3 +589,6 @@ leveldb_options_t* rleveldb_collect_options(SEXP r_create_if_missing,
 
   return options;
 }
+
+leveldb_readoptions_t * default_readoptions = NULL;
+leveldb_writeoptions_t * default_writeoptions = NULL;

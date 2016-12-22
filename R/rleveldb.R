@@ -24,24 +24,25 @@ leveldb_destroy <- function(name) {
   .Call(Crleveldb_destroy, name)
 }
 
-leveldb_get <- function(db, key, force_raw = FALSE, error_if_missing = FALSE) {
+leveldb_get <- function(db, key, force_raw = FALSE, error_if_missing = FALSE,
+                        readoptions = NULL) {
   ## assert_scalar_character_or_raw(key)
-  .Call(Crleveldb_get, db, key, force_raw, error_if_missing)
+  .Call(Crleveldb_get, db, key, force_raw, error_if_missing, readoptions)
 }
 
-leveldb_put <- function(db, key, value) {
+leveldb_put <- function(db, key, value, writeoptions = NULL) {
   ## assert_scalar_character_or_raw(key)
   ## assert_scalar_character_or_raw(value)
-  .Call(Crleveldb_put, db, key, value)
+  .Call(Crleveldb_put, db, key, value, writeoptions)
 }
 
-leveldb_delete <- function(db, key) {
+leveldb_delete <- function(db, key, writeoptions = NULL) {
   ## assert_scalar_character_or_raw(key)
-  .Call(Crleveldb_delete, db, key)
+  .Call(Crleveldb_delete, db, key, writeoptions)
 }
 
-leveldb_iter_create <- function(db) {
-  .Call(Crleveldb_iter_create, db)
+leveldb_iter_create <- function(db, readoptions = NULL) {
+  .Call(Crleveldb_iter_create, db, readoptions)
 }
 
 leveldb_iter_destroy <- function(it, error_if_closed = FALSE) {
@@ -81,17 +82,38 @@ leveldb_iter_value <- function(it, force_raw = FALSE,
   .Call(Crleveldb_iter_value, it, force_raw, error_if_invalid)
 }
 
-leveldb_keys_len <- function(db) {
-  .Call(Crleveldb_keys_len, db)
+leveldb_snapshot <- function(db) {
+  .Call(Crleveldb_snapshot_create, db)
 }
 
-leveldb_keys <- function(db, as_raw = FALSE) {
-  .Call(Crleveldb_keys, db, as_raw)
+leveldb_snapshot_release <- function(snapshot) {
+  .Call(Crleveldb_snapshot_release, snapshot)
 }
 
-leveldb_exists <- function(db, key) {
+leveldb_readoptions <- function(verify_checksums = FALSE, fill_cache = NULL,
+                                snapshot = NULL) {
+  ptr <- .Call(Crleveldb_readoptions, verify_checksums, fill_cache, snapshot)
+  class(ptr) <- "leveldb_readoptions"
+  ptr
+}
+
+leveldb_writeoptions <- function(sync = NULL) {
+  ptr <- .Call(Crleveldb_writeoptions, sync)
+  class(ptr) <- "leveldb_writeoptions"
+  ptr
+}
+
+leveldb_keys_len <- function(db, readoptions = NULL) {
+  .Call(Crleveldb_keys_len, db, readoptions)
+}
+
+leveldb_keys <- function(db, as_raw = FALSE, readoptions = NULL) {
+  .Call(Crleveldb_keys, db, as_raw, readoptions)
+}
+
+leveldb_exists <- function(db, key, readoptions = NULL) {
   ## assert_scalar_character_or_raw(key)
-  .Call(Crleveldb_exists, db, key)
+  .Call(Crleveldb_exists, db, key, readoptions)
 }
 
 leveldb_version <- function() {
