@@ -5,8 +5,10 @@
 #include "support.h"
 
 // Internals:
-leveldb_t* rleveldb_get_db(SEXP extptr, bool closed_error);
-static void rleveldb_finalize(SEXP extptr);
+leveldb_t* rleveldb_get_db(SEXP r_db, bool closed_error);
+leveldb_iterator_t* rleveldb_get_iterator(SEXP r_it, bool closed_error);
+static void rleveldb_finalize(SEXP r_db);
+static void rleveldb_iter_finalize(SEXP r_db);
 void rleveldb_handle_error(char* err);
 // Slightly different
 size_t rleveldb_get_keys_len(leveldb_t *db);
@@ -22,17 +24,17 @@ SEXP rleveldb_connect(SEXP r_name) {
   leveldb_free(options);
   rleveldb_handle_error(err);
 
-  SEXP extPtr = PROTECT(R_MakeExternalPtr(db, r_name, R_NilValue));
-  R_RegisterCFinalizer(extPtr, rleveldb_finalize);
+  SEXP r_db = PROTECT(R_MakeExternalPtr(db, r_name, R_NilValue));
+  R_RegisterCFinalizer(r_db, rleveldb_finalize);
   UNPROTECT(1);
-  return extPtr;
+  return r_db;
 }
 
-SEXP rleveldb_close(SEXP extptr, SEXP r_error_if_closed) {
-  leveldb_t *db = rleveldb_get_db(extptr, scalar_logical(r_error_if_closed));
+SEXP rleveldb_close(SEXP r_db, SEXP r_error_if_closed) {
+  leveldb_t *db = rleveldb_get_db(r_db, scalar_logical(r_error_if_closed));
   if (db != NULL) {
     leveldb_close(db);
-    R_ClearExternalPtr(extptr);
+    R_ClearExternalPtr(r_db);
   }
   return ScalarLogical(db != NULL);
 }
@@ -49,11 +51,11 @@ SEXP rleveldb_destroy(SEXP r_name) {
   return ScalarLogical(true);
 }
 
-SEXP rleveldb_get(SEXP extptr, SEXP key, SEXP r_force_raw,
+SEXP rleveldb_get(SEXP r_db, SEXP r_key, SEXP r_force_raw,
                   SEXP r_error_if_missing) {
-  leveldb_t *db = rleveldb_get_db(extptr, true);
-  const char *key_data = get_key_ptr(key);
-  size_t key_len = get_key_len(key);
+  leveldb_t *db = rleveldb_get_db(r_db, true);
+  const char *key_data = get_key_ptr(r_key);
+  size_t key_len = get_key_len(r_key);
   bool force_raw = scalar_logical(r_force_raw),
     error_if_missing = scalar_logical(r_error_if_missing);
 
@@ -70,7 +72,7 @@ SEXP rleveldb_get(SEXP extptr, SEXP key, SEXP r_force_raw,
     leveldb_free(read);
   } else if (!error_if_missing) {
     ret = R_NilValue;
-  } else if (TYPEOF(key) == STRSXP) {
+  } else if (TYPEOF(r_key) == STRSXP) {
     Rf_error("Key '%s' not found in database", key_data);
   } else {
     Rf_error("Key not found in database");
@@ -79,10 +81,11 @@ SEXP rleveldb_get(SEXP extptr, SEXP key, SEXP r_force_raw,
   return ret;
 }
 
-SEXP rleveldb_put(SEXP extptr, SEXP key, SEXP value) {
-  leveldb_t *db = rleveldb_get_db(extptr, true);
-  const char *key_data = get_key_ptr(key), *value_data = get_value_ptr(value);
-  size_t key_len = get_key_len(key),   value_len = get_value_len(value);
+SEXP rleveldb_put(SEXP r_db, SEXP r_key, SEXP r_value) {
+  leveldb_t *db = rleveldb_get_db(r_db, true);
+  const char *key_data = get_key_ptr(r_key),
+    *value_data = get_value_ptr(r_value);
+  size_t key_len = get_key_len(r_key), value_len = get_value_len(r_value);
 
   char *err = NULL;
   leveldb_writeoptions_t *options = leveldb_writeoptions_create();
@@ -93,10 +96,10 @@ SEXP rleveldb_put(SEXP extptr, SEXP key, SEXP value) {
   return R_NilValue;
 }
 
-SEXP rleveldb_delete(SEXP extptr, SEXP key) {
-  leveldb_t *db = rleveldb_get_db(extptr, true);
-  const char *key_data = get_key_ptr(key);
-  size_t key_len = get_key_len(key);
+SEXP rleveldb_delete(SEXP r_db, SEXP r_key) {
+  leveldb_t *db = rleveldb_get_db(r_db, true);
+  const char *key_data = get_key_ptr(r_key);
+  size_t key_len = get_key_len(r_key);
 
   char *err = NULL;
   leveldb_writeoptions_t *options = leveldb_writeoptions_create();
@@ -107,9 +110,101 @@ SEXP rleveldb_delete(SEXP extptr, SEXP key) {
   return R_NilValue;
 }
 
+// Iterators
+SEXP rleveldb_iter_create(SEXP r_db) {
+  leveldb_t *db = rleveldb_get_db(r_db, true);
+  leveldb_readoptions_t *options = leveldb_readoptions_create();
+  leveldb_iterator_t *it = leveldb_create_iterator(db, options);
+
+  // TODO: Consider using r_db as the tag here?
+  SEXP r_it = PROTECT(R_MakeExternalPtr(it, R_NilValue, R_NilValue));
+  R_RegisterCFinalizer(r_it, rleveldb_iter_finalize);
+  UNPROTECT(1);
+  return r_it;
+}
+
+SEXP rleveldb_iter_destroy(SEXP r_it, SEXP r_error_if_closed) {
+  bool error_if_closed = scalar_logical(r_error_if_closed);
+  leveldb_iterator_t *it = rleveldb_get_iterator(r_it, error_if_closed);
+  if (it != NULL) {
+    leveldb_iter_destroy(it);
+    R_ClearExternalPtr(r_it);
+  }
+  return ScalarLogical(it != NULL);
+}
+
+SEXP rleveldb_iter_valid(SEXP r_it) {
+  leveldb_iterator_t *it = rleveldb_get_iterator(r_it, true);
+  return ScalarLogical(leveldb_iter_valid(it));
+}
+
+SEXP rleveldb_iter_seek_to_first(SEXP r_it) {
+  leveldb_iterator_t *it = rleveldb_get_iterator(r_it, true);
+  leveldb_iter_seek_to_first(it);
+  return R_NilValue;
+}
+
+SEXP rleveldb_iter_seek_to_last(SEXP r_it) {
+  leveldb_iterator_t *it = rleveldb_get_iterator(r_it, true);
+  leveldb_iter_seek_to_last(it);
+  return R_NilValue;
+}
+
+SEXP rleveldb_iter_seek(SEXP r_it, SEXP r_key) {
+  leveldb_iterator_t *it = rleveldb_get_iterator(r_it, true);
+  const char *key_data = get_key_ptr(r_key);
+  size_t key_len = get_key_len(r_key);
+  leveldb_iter_seek(it, key_data, key_len);
+  return R_NilValue;
+}
+
+SEXP rleveldb_iter_next(SEXP r_it) {
+  leveldb_iterator_t *it = rleveldb_get_iterator(r_it, true);
+  leveldb_iter_next(it);
+  return R_NilValue;
+}
+
+SEXP rleveldb_iter_prev(SEXP r_it) {
+  leveldb_iterator_t *it = rleveldb_get_iterator(r_it, true);
+  leveldb_iter_prev(it);
+  return R_NilValue;
+}
+
+SEXP rleveldb_iter_key(SEXP r_it, SEXP r_force_raw, SEXP r_error_if_invalid) {
+  leveldb_iterator_t *it = rleveldb_get_iterator(r_it, true);
+  bool force_raw = scalar_logical(r_force_raw),
+    error_if_invalid = scalar_logical(r_error_if_invalid);
+  size_t len;
+  if (!leveldb_iter_valid(it)) {
+    if (error_if_invalid) {
+      Rf_error("Iterator is not valid");
+    } else {
+      return R_NilValue;
+    }
+  }
+  const char *data = leveldb_iter_key(it, &len);
+  return raw_string_to_sexp(data, len, force_raw);
+}
+
+SEXP rleveldb_iter_value(SEXP r_it, SEXP r_force_raw, SEXP r_error_if_invalid) {
+  leveldb_iterator_t *it = rleveldb_get_iterator(r_it, true);
+  bool force_raw = scalar_logical(r_force_raw),
+    error_if_invalid = scalar_logical(r_error_if_invalid);
+  if (!leveldb_iter_valid(it)) {
+    if (error_if_invalid) {
+      Rf_error("Iterator is not valid");
+    } else {
+      return R_NilValue;
+    }
+  }
+  size_t len;
+  const char *data = leveldb_iter_value(it, &len);
+  return raw_string_to_sexp(data, len, force_raw);
+}
+
 // Built on top of the leveldb api:
-SEXP rleveldb_keys(SEXP extptr, SEXP r_as_raw) {
-  leveldb_t *db = rleveldb_get_db(extptr, true);
+SEXP rleveldb_keys(SEXP r_db, SEXP r_as_raw) {
+  leveldb_t *db = rleveldb_get_db(r_db, true);
   bool as_raw = scalar_logical(r_as_raw);
 
   size_t n = rleveldb_get_keys_len(db);
@@ -151,37 +246,59 @@ SEXP rleveldb_keys(SEXP extptr, SEXP r_as_raw) {
   return ret;
 }
 
-SEXP rleveldb_keys_len(SEXP extptr) {
-  leveldb_t *db = rleveldb_get_db(extptr, true);
+SEXP rleveldb_keys_len(SEXP r_db) {
+  leveldb_t *db = rleveldb_get_db(r_db, true);
   return ScalarInteger(rleveldb_get_keys_len(db));
 }
 
-SEXP rleveldb_exists(SEXP extptr, SEXP key) {
-  leveldb_t *db = rleveldb_get_db(extptr, true);
-  const char *key_data = get_key_ptr(key);
-  size_t key_len = get_key_len(key);
+SEXP rleveldb_exists(SEXP r_db, SEXP r_key) {
+  leveldb_t *db = rleveldb_get_db(r_db, true);
+  const char *key_data = get_key_ptr(r_key);
+  size_t key_len = get_key_len(r_key);
   return ScalarLogical(rleveldb_get_exists(db, key_data, key_len));
 }
 
 // Internal function definitions:
-void rleveldb_finalize(SEXP extptr) {
-  leveldb_t* db = rleveldb_get_db(extptr, false);
+void rleveldb_finalize(SEXP r_db) {
+  leveldb_t* db = rleveldb_get_db(r_db, false);
   if (db) {
     leveldb_close(db);
-    R_ClearExternalPtr(extptr);
+    R_ClearExternalPtr(r_db);
   }
 }
 
-leveldb_t* rleveldb_get_db(SEXP extptr, bool closed_error) {
+void rleveldb_iter_finalize(SEXP r_it) {
+  leveldb_iterator_t* it = rleveldb_get_iterator(r_it, false);
+  if (it) {
+    leveldb_iter_destroy(it);
+    R_ClearExternalPtr(r_it);
+  }
+}
+
+leveldb_t* rleveldb_get_db(SEXP r_db, bool closed_error) {
   void *db = NULL;
-  if (TYPEOF(extptr) != EXTPTRSXP) {
+  if (TYPEOF(r_db) != EXTPTRSXP) {
     Rf_error("Expected an external pointer");
   }
-  db = (leveldb_t*) R_ExternalPtrAddr(extptr);
+  db = (leveldb_t*) R_ExternalPtrAddr(r_db);
   if (!db && closed_error) {
     Rf_error("leveldb handle is not open; can't connect");
   }
   return (leveldb_t*) db;
+}
+
+// TODO: distinguish here between an iterator and db handle by
+// checking the SEXP on the tag?
+leveldb_iterator_t* rleveldb_get_iterator(SEXP r_it, bool closed_error) {
+  void *it = NULL;
+  if (TYPEOF(r_it) != EXTPTRSXP) {
+    Rf_error("Expected an external pointer");
+  }
+  it = (leveldb_iterator_t*) R_ExternalPtrAddr(r_it);
+  if (!it && closed_error) {
+    Rf_error("leveldb iterator is not open; can't connect");
+  }
+  return (leveldb_iterator_t*) it;
 }
 
 void rleveldb_handle_error(char* err) {

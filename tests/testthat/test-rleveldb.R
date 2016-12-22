@@ -38,6 +38,31 @@ test_that("CRUD", {
   expect_null(leveldb_delete(db, "foo"))
 })
 
+test_that("iterator", {
+  db <- leveldb_connect(tempfile())
+  leveldb_put(db, "foo", "bar")
+  it <- leveldb_iter_create(db)
+  expect_false(leveldb_iter_valid(it))
+  expect_null(leveldb_iter_seek_to_first(it))
+  expect_true(leveldb_iter_valid(it))
+  expect_equal(leveldb_iter_key(it), "foo")
+  expect_equal(leveldb_iter_key(it, TRUE), charToRaw("foo"))
+  expect_equal(leveldb_iter_value(it), "bar")
+  expect_equal(leveldb_iter_value(it, TRUE), charToRaw("bar"))
+  expect_null(leveldb_iter_next(it))
+  expect_false(leveldb_iter_valid(it))
+
+  expect_null(leveldb_iter_key(it))
+  expect_null(leveldb_iter_key(it, TRUE))
+  expect_error(leveldb_iter_key(it, error_if_invalid = TRUE),
+               "Iterator is not valid")
+
+  expect_null(leveldb_iter_value(it))
+  expect_null(leveldb_iter_value(it, TRUE))
+  expect_error(leveldb_iter_value(it, error_if_invalid = TRUE),
+               "Iterator is not valid")
+})
+
 test_that("Get missing key", {
   db <- leveldb_connect(tempfile())
   expect_null(leveldb_get(db, "foo"))
