@@ -1,3 +1,7 @@
 .Rproj.user
 .Rhistory
 .RData
+.valgrind_ignore
+TODO.md
+notes.md
+*.so.dSYM

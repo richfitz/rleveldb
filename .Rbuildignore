@@ -1,3 +1,7 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
 ^Makefile$
+^\.valgrind_ignore$
+^TODO\.md$
+^notes\.md$
+\.so.dSYM$
