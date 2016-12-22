@@ -56,6 +56,7 @@ SEXP rleveldb_connect(SEXP r_name,
   // * set_info_log
   // * set_comparator
   // * restart_interval
+  const char *name = scalar_character(r_name);
   leveldb_options_t *options =
     rleveldb_collect_options(r_create_if_missing, r_error_if_exists,
                              r_paranoid_checks, r_write_buffer_size,
@@ -63,7 +64,6 @@ SEXP rleveldb_connect(SEXP r_name,
                              r_block_size, r_use_compression,
                              r_bloom_filter_bits_per_key);
   char *err = NULL;
-  const char *name = CHAR(STRING_ELT(r_name, 0));
   leveldb_t *db = leveldb_open(options, name, &err);
   leveldb_free(options);
   rleveldb_handle_error(err);

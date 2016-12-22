@@ -19,8 +19,7 @@ size_t get_data_len(SEXP data, const char* name) {
     if (length(data) != 1) {
       Rf_error("%s must be a scalar character", name);
     }
-    SEXP str = STRING_ELT(data, 0);
-    return length(str);
+    return length(STRING_ELT(data, 0));
     break;
   case RAWSXP:
     return length(data);
@@ -35,8 +34,7 @@ const char* get_data_ptr(SEXP data, const char* name) {
     if (length(data) != 1) {
       Rf_error("%s must be a scalar character", name);
     }
-    SEXP str = STRING_ELT(data, 0);
-    return CHAR(str);
+    return CHAR(STRING_ELT(data, 0));
   case RAWSXP:
     return (const char*) RAW(data);
   default:

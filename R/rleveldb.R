@@ -9,7 +9,6 @@ leveldb_connect <- function(name,
                             block_size = NULL,
                             use_compression = NULL,
                             bloom_filter_bits_per_key = NULL) {
-  ## assert_scalar_character(name)
   .Call(Crleveldb_connect, name, create_if_missing, error_if_exists,
         paranoid_checks, write_buffer_size, max_open_files,
         cache_capacity, block_size, use_compression, bloom_filter_bits_per_key)
@@ -20,7 +19,6 @@ leveldb_close <- function(db, error_if_closed = FALSE) {
 }
 
 leveldb_destroy <- function(name) {
-  ## assert_scalar_character(name)
   .Call(Crleveldb_destroy, name)
 }
 
@@ -34,18 +32,14 @@ leveldb_property <- function(db, name, error_if_missing = FALSE) {
 
 leveldb_get <- function(db, key, force_raw = FALSE, error_if_missing = FALSE,
                         readoptions = NULL) {
-  ## assert_scalar_character_or_raw(key)
   .Call(Crleveldb_get, db, key, force_raw, error_if_missing, readoptions)
 }
 
 leveldb_put <- function(db, key, value, writeoptions = NULL) {
-  ## assert_scalar_character_or_raw(key)
-  ## assert_scalar_character_or_raw(value)
   .Call(Crleveldb_put, db, key, value, writeoptions)
 }
 
 leveldb_delete <- function(db, key, writeoptions = NULL) {
-  ## assert_scalar_character_or_raw(key)
   .Call(Crleveldb_delete, db, key, writeoptions)
 }
 
@@ -120,7 +114,6 @@ leveldb_keys <- function(db, as_raw = FALSE, readoptions = NULL) {
 }
 
 leveldb_exists <- function(db, key, readoptions = NULL) {
-  ## assert_scalar_character_or_raw(key)
   .Call(Crleveldb_exists, db, key, readoptions)
 }
 
