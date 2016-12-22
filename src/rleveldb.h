@@ -13,6 +13,7 @@ SEXP rleveldb_connect(SEXP r_name,
                       SEXP r_bloom_filter_bits_per_key);
 SEXP rleveldb_close(SEXP r_db, SEXP r_error_if_closed);
 SEXP rleveldb_destroy(SEXP r_name);
+SEXP rleveldb_repair(SEXP r_name);
 SEXP rleveldb_property(SEXP r_db, SEXP r_name, SEXP r_error_if_missing);
 
 SEXP rleveldb_get(SEXP r_db, SEXP r_key, SEXP r_force_raw,

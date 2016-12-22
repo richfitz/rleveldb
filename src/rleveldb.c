@@ -84,12 +84,20 @@ SEXP rleveldb_close(SEXP r_db, SEXP r_error_if_closed) {
 }
 
 SEXP rleveldb_destroy(SEXP r_name) {
-  // TODO: on error, does leveldb_options_create cause a leak?
+  const char *name = scalar_character(r_name);
   leveldb_options_t *options = leveldb_options_create();
-  leveldb_options_set_create_if_missing(options, 0);
   char *err = NULL;
-  const char *name = CHAR(STRING_ELT(r_name, 0));
   leveldb_destroy_db(options, name, &err);
+  leveldb_free(options);
+  rleveldb_handle_error(err);
+  return ScalarLogical(true);
+}
+
+SEXP rleveldb_repair(SEXP r_name) {
+  const char *name = scalar_character(r_name);
+  leveldb_options_t *options = leveldb_options_create();
+  char *err = NULL;
+  leveldb_repair_db(options, name, &err);
   leveldb_free(options);
   rleveldb_handle_error(err);
   return ScalarLogical(true);

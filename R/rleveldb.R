@@ -24,6 +24,10 @@ leveldb_destroy <- function(name) {
   .Call(Crleveldb_destroy, name)
 }
 
+leveldb_repair <- function(name) {
+  .Call(Crleveldb_repair, name)
+}
+
 leveldb_property <- function(db, name, error_if_missing = FALSE) {
   .Call(Crleveldb_property, db, name, error_if_missing)
 }
