@@ -196,9 +196,9 @@ SEXP rleveldb_iter_create(SEXP r_db, SEXP r_readoptions) {
   return r_it;
 }
 
-SEXP rleveldb_iter_destroy(SEXP r_it, SEXP r_error_if_closed) {
-  bool error_if_closed = scalar_logical(r_error_if_closed);
-  leveldb_iterator_t *it = rleveldb_get_iterator(r_it, error_if_closed);
+SEXP rleveldb_iter_destroy(SEXP r_it, SEXP r_error_if_destroyed) {
+  bool error_if_destroyed = scalar_logical(r_error_if_destroyed);
+  leveldb_iterator_t *it = rleveldb_get_iterator(r_it, error_if_destroyed);
   if (it != NULL) {
     leveldb_iter_destroy(it);
     R_ClearExternalPtr(r_it);

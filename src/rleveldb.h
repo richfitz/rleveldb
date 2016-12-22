@@ -22,7 +22,7 @@ SEXP rleveldb_put(SEXP r_db, SEXP r_key, SEXP r_value, SEXP r_writeoptions);
 SEXP rleveldb_delete(SEXP r_db, SEXP r_key, SEXP r_writeoptions);
 
 SEXP rleveldb_iter_create(SEXP r_db, SEXP r_readoptions);
-SEXP rleveldb_iter_destroy(SEXP r_it, SEXP r_error_if_closed);
+SEXP rleveldb_iter_destroy(SEXP r_it, SEXP r_error_if_destroyed);
 SEXP rleveldb_iter_valid(SEXP r_it);
 SEXP rleveldb_iter_seek_to_first(SEXP r_it);
 SEXP rleveldb_iter_seek_to_last(SEXP r_it);

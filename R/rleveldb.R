@@ -47,8 +47,8 @@ leveldb_iter_create <- function(db, readoptions = NULL) {
   .Call(Crleveldb_iter_create, db, readoptions)
 }
 
-leveldb_iter_destroy <- function(it, error_if_closed = FALSE) {
-  .Call(Crleveldb_iter_destroy, it, error_if_closed)
+leveldb_iter_destroy <- function(it, error_if_destroyed = FALSE) {
+  .Call(Crleveldb_iter_destroy, it, error_if_destroyed)
 }
 
 leveldb_iter_valid <- function(it) {
