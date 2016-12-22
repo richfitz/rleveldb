@@ -10,14 +10,42 @@ leveldb_iterator_t* rleveldb_get_iterator(SEXP r_it, bool closed_error);
 static void rleveldb_finalize(SEXP r_db);
 static void rleveldb_iter_finalize(SEXP r_db);
 void rleveldb_handle_error(char* err);
+leveldb_options_t* rleveldb_collect_options(SEXP r_create_if_missing,
+                                            SEXP r_error_if_exists,
+                                            SEXP r_paranoid_checks,
+                                            SEXP r_write_buffer_size,
+                                            SEXP r_max_open_files,
+                                            SEXP r_cache_capacity,
+                                            SEXP r_block_size,
+                                            SEXP r_use_compression,
+                                            SEXP r_bloom_filter_bits_per_key);
 // Slightly different
 size_t rleveldb_get_keys_len(leveldb_t *db);
 bool rleveldb_get_exists(leveldb_t *db, const char *key_data, size_t key_len);
 
 // Implementations:
-SEXP rleveldb_connect(SEXP r_name) {
-  leveldb_options_t *options = leveldb_options_create();
-  leveldb_options_set_create_if_missing(options, 1);
+SEXP rleveldb_connect(SEXP r_name,
+                      SEXP r_create_if_missing,
+                      SEXP r_error_if_exists,
+                      SEXP r_paranoid_checks,
+                      SEXP r_write_buffer_size,
+                      SEXP r_max_open_files,
+                      SEXP r_cache_capacity,
+                      SEXP r_block_size,
+                      SEXP r_use_compression,
+                      SEXP r_bloom_filter_bits_per_key) {
+  // Unimplemented:
+  // * general set_filter_policy
+  // * set_env
+  // * set_info_log
+  // * set_comparator
+  // * restart_interval
+  leveldb_options_t *options =
+    rleveldb_collect_options(r_create_if_missing, r_error_if_exists,
+                             r_paranoid_checks, r_write_buffer_size,
+                             r_max_open_files, r_cache_capacity,
+                             r_block_size, r_use_compression,
+                             r_bloom_filter_bits_per_key);
   char *err = NULL;
   const char *name = CHAR(STRING_ELT(r_name, 0));
   leveldb_t *db = leveldb_open(options, name, &err);
@@ -348,4 +376,62 @@ bool rleveldb_get_exists(leveldb_t *db, const char *key_data, size_t key_len) {
     }
   }
   return found;
+}
+
+leveldb_options_t* rleveldb_collect_options(SEXP r_create_if_missing,
+                                            SEXP r_error_if_exists,
+                                            SEXP r_paranoid_checks,
+                                            SEXP r_write_buffer_size,
+                                            SEXP r_max_open_files,
+                                            SEXP r_cache_capacity,
+                                            SEXP r_block_size,
+                                            SEXP r_use_compression,
+                                            SEXP r_bloom_filter_bits_per_key) {
+  leveldb_options_t *options = leveldb_options_create();
+  // TODO: put a finaliser on options so that we can error safely in
+  // the scalar_logical commands
+  if (r_create_if_missing != R_NilValue) {
+    leveldb_options_set_create_if_missing(options,
+                                          scalar_logical(r_create_if_missing));
+  }
+  if (r_error_if_exists != R_NilValue) {
+    leveldb_options_set_error_if_exists(options,
+                                        scalar_logical(r_error_if_exists));
+  }
+  if (r_paranoid_checks != R_NilValue) {
+    leveldb_options_set_paranoid_checks(options,
+                                        scalar_logical(r_paranoid_checks));
+  }
+  if (r_write_buffer_size != R_NilValue) {
+    leveldb_options_set_write_buffer_size(options,
+                                          scalar_size(r_write_buffer_size));
+  }
+  if (r_max_open_files != R_NilValue) {
+    leveldb_options_set_max_open_files(options,
+                                       scalar_size(r_max_open_files));
+  }
+  if (r_cache_capacity != R_NilValue) {
+    // TODO: not clear when we have to delete this.  Will it be done
+    // for us?  I think that we might have to do this when cleaning up
+    // the options?
+    size_t capacity = scalar_size(r_cache_capacity);
+    leveldb_cache_t* cache = leveldb_cache_create_lru(capacity);
+    leveldb_options_set_cache(options, cache);
+  }
+  if (r_block_size != R_NilValue) {
+    leveldb_options_set_block_size(options,
+                                   scalar_size(r_block_size));
+  }
+  if (r_use_compression != R_NilValue) {
+    leveldb_options_set_compression(options,
+                                    scalar_logical(r_use_compression));
+  }
+  if (r_bloom_filter_bits_per_key != R_NilValue) {
+    size_t bits_per_key = scalar_size(r_bloom_filter_bits_per_key);
+    leveldb_filterpolicy_t* filter =
+      leveldb_filterpolicy_create_bloom(bits_per_key);
+    leveldb_options_set_filter_policy(options, filter);
+  }
+
+  return options;
 }

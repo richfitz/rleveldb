@@ -93,3 +93,29 @@ bool scalar_logical(SEXP x) {
     return 0;
   }
 }
+
+size_t scalar_size(SEXP x) {
+  int len = LENGTH(x);
+  int value = 0;
+  if (len == 1) {
+    if (TYPEOF(x) == INTSXP) {
+      value = INTEGER(x)[0];
+      if (value == NA_INTEGER) {
+        Rf_error("Expected a non-missing (& finite) size");
+      }
+    } else if (TYPEOF(x) == REALSXP) {
+      value = (int) REAL(x)[0];
+      if (!R_FINITE(value)) {
+        Rf_error("Expected a non-missing (& finite) size");
+      }
+    } else {
+      Rf_error("Expected a logical scalar");
+    }
+    if (value < 0) {
+      Rf_error("Expected a positive size");
+    }
+  } else {
+    Rf_error("Expected a scalar size");
+  }
+  return (size_t) value;
+}

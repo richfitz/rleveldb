@@ -2,7 +2,7 @@
 #include <R_ext/Rdynload.h>
 
 static const R_CallMethodDef call_methods[] = {
-  {"Crleveldb_connect",  (DL_FUNC) &rleveldb_connect,  1},
+  {"Crleveldb_connect",  (DL_FUNC) &rleveldb_connect,  10},
   {"Crleveldb_close",    (DL_FUNC) &rleveldb_close,    2},
   {"Crleveldb_destroy",  (DL_FUNC) &rleveldb_destroy,  1},
 

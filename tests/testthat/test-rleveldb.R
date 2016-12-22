@@ -1,7 +1,7 @@
 context("rleveldb")
 
 test_that("open, close", {
-  db <- leveldb_connect(tempfile())
+  db <- leveldb_connect(tempfile(), create_if_missing = TRUE)
   expect_true(leveldb_close(db))
   expect_false(leveldb_close(db))
   expect_error(leveldb_close(db, TRUE),
@@ -12,7 +12,7 @@ test_that("open, close", {
 
 test_that("destroy", {
   path <- tempfile()
-  db <- leveldb_connect(path)
+  db <- leveldb_connect(path, create_if_missing = TRUE)
   expect_identical(leveldb_keys_len(db), 0L)
 
   expect_error(leveldb_destroy(path), "IO error: lock")
@@ -25,7 +25,7 @@ test_that("destroy", {
 })
 
 test_that("CRUD", {
-  db <- leveldb_connect(tempfile())
+  db <- leveldb_connect(tempfile(), create_if_missing = TRUE)
 
   leveldb_put(db, "foo", "bar")
   expect_equal(leveldb_get(db, "foo"), "bar")
@@ -39,7 +39,7 @@ test_that("CRUD", {
 })
 
 test_that("iterator", {
-  db <- leveldb_connect(tempfile())
+  db <- leveldb_connect(tempfile(), create_if_missing = TRUE)
   leveldb_put(db, "foo", "bar")
   it <- leveldb_iter_create(db)
   expect_false(leveldb_iter_valid(it))
@@ -64,7 +64,7 @@ test_that("iterator", {
 })
 
 test_that("Get missing key", {
-  db <- leveldb_connect(tempfile())
+  db <- leveldb_connect(tempfile(), create_if_missing = TRUE)
   expect_null(leveldb_get(db, "foo"))
   expect_error(leveldb_get(db, "foo", error_if_missing = TRUE),
                "Key 'foo' not found in database")
@@ -76,7 +76,7 @@ test_that("Get missing key", {
 })
 
 test_that("keys", {
-  db <- leveldb_connect(tempfile())
+  db <- leveldb_connect(tempfile(), create_if_missing = TRUE)
   expect_identical(leveldb_keys_len(db), 0L)
   expect_identical(leveldb_keys(db, TRUE), list())
   expect_identical(leveldb_keys(db, FALSE), character(0))
@@ -91,7 +91,7 @@ test_that("keys", {
 })
 
 test_that("exists", {
-  db <- leveldb_connect(tempfile())
+  db <- leveldb_connect(tempfile(), create_if_missing = TRUE)
   expect_false(leveldb_exists(db, "foo"))
   leveldb_put(db, "foo", "bar")
   expect_true(leveldb_exists(db, "foo"))
