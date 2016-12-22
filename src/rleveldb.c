@@ -69,6 +69,10 @@ SEXP rleveldb_connect(SEXP r_name,
   char *err = NULL;
   leveldb_t *db = leveldb_open(options, name, &err);
   leveldb_free(options);
+  // TODO: when cache is used, this approach leaves it leaking.  We
+  // need to keep the cache around (possibly with all the options?)
+  // for the lifetime of the object.  One option would be to bundle
+  // options into a SEXP and put it into either tag or options.
   rleveldb_handle_error(err);
 
   SEXP r_db = PROTECT(R_MakeExternalPtr(db, r_name, R_NilValue));
