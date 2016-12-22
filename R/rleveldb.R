@@ -92,6 +92,14 @@ leveldb_snapshot_release <- function(snapshot) {
   .Call(Crleveldb_snapshot_release, snapshot)
 }
 
+leveldb_approximate_sizes <- function(db, start, limit) {
+  .Call(Crleveldb_approximate_sizes, db, start, limit)
+}
+
+leveldb_compact_range <- function(db, start, limit) {
+  .Call(Crleveldb_compact_range, db, start, limit)
+}
+
 leveldb_readoptions <- function(verify_checksums = FALSE, fill_cache = NULL,
                                 snapshot = NULL) {
   ptr <- .Call(Crleveldb_readoptions, verify_checksums, fill_cache, snapshot)

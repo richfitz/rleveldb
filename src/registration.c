@@ -27,6 +27,9 @@ static const R_CallMethodDef call_methods[] = {
   {"Crleveldb_snapshot_create",    (DL_FUNC) &rleveldb_snapshot_create,    1},
   {"Crleveldb_snapshot_release",   (DL_FUNC) &rleveldb_snapshot_release,   1},
 
+  {"Crleveldb_approximate_sizes",  (DL_FUNC) &rleveldb_approximate_sizes,  3},
+  {"Crleveldb_compact_range",      (DL_FUNC) &rleveldb_compact_range,      3},
+
   {"Crleveldb_readoptions",        (DL_FUNC) &rleveldb_readoptions,        3},
   {"Crleveldb_writeoptions",       (DL_FUNC) &rleveldb_writeoptions,       1},
 

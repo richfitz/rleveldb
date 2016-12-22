@@ -35,6 +35,9 @@ SEXP rleveldb_iter_value(SEXP r_it, SEXP r_force_raw, SEXP r_error_if_invalid);
 SEXP rleveldb_snapshot_create(SEXP r_db);
 SEXP rleveldb_snapshot_release(SEXP r_snapshot, SEXP r_error_if_released);
 
+SEXP rleveldb_approximate_sizes(SEXP r_db, SEXP r_start_key, SEXP r_limit_key);
+SEXP rleveldb_compact_range(SEXP r_db, SEXP r_start_key, SEXP r_limit_key);
+
 SEXP rleveldb_readoptions(SEXP r_verify_checksums, SEXP r_fill_cache,
                           SEXP r_snapshot);
 SEXP rleveldb_writeoptions(SEXP r_sync);
