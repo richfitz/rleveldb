@@ -119,3 +119,12 @@ size_t scalar_size(SEXP x) {
   }
   return (size_t) value;
 }
+
+const char * scalar_character(SEXP x) {
+  if (LENGTH(x) == 1 && TYPEOF(x) == STRSXP) {
+    return CHAR(STRING_ELT(x, 0));
+  } else {
+    Rf_error("Expected a scalar string");
+    return NULL;
+  }
+}

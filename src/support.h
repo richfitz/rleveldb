@@ -9,3 +9,4 @@ const char* get_value_ptr(SEXP key);
 SEXP raw_string_to_sexp(const char *str, size_t len, bool force_raw);
 bool scalar_logical(SEXP x);
 size_t scalar_size(SEXP x);
+const char * scalar_character(SEXP x);

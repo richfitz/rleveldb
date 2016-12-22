@@ -104,3 +104,11 @@ test_that("version", {
   expect_equal(length(v), 1L)
   expect_equal(length(unclass(v)[[1L]]), 2L)
 })
+
+test_that("properties", {
+  db <- leveldb_connect(tempfile(), create_if_missing = TRUE)
+  expect_is(leveldb_property(db, "leveldb.stats"), "character")
+  expect_null(leveldb_property(db, "nosuchproperty"))
+  expect_error(leveldb_property(db, "nosuchproperty", TRUE),
+               "No such property 'nosuchproperty'")
+})

@@ -95,6 +95,23 @@ SEXP rleveldb_destroy(SEXP r_name) {
   return ScalarLogical(true);
 }
 
+SEXP rleveldb_property(SEXP r_db, SEXP r_name, SEXP r_error_if_missing) {
+  leveldb_t *db = rleveldb_get_db(r_db, true);
+  const char *name = scalar_character(r_name);
+  bool error_if_missing = scalar_logical(r_error_if_missing);
+  char *value = leveldb_property_value(db, name);
+  SEXP ret;
+  if (value != NULL) {
+    ret = mkString(value);
+    leveldb_free(value);
+  } else if (error_if_missing) {
+    Rf_error("No such property '%s'", name);
+  } else {
+    ret = R_NilValue;
+  }
+  return ret;
+}
+
 SEXP rleveldb_get(SEXP r_db, SEXP r_key, SEXP r_force_raw,
                   SEXP r_error_if_missing, SEXP r_readoptions) {
   leveldb_t *db = rleveldb_get_db(r_db, true);

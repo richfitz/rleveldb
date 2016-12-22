@@ -24,6 +24,10 @@ leveldb_destroy <- function(name) {
   .Call(Crleveldb_destroy, name)
 }
 
+leveldb_property <- function(db, name, error_if_missing = FALSE) {
+  .Call(Crleveldb_property, db, name, error_if_missing)
+}
+
 leveldb_get <- function(db, key, force_raw = FALSE, error_if_missing = FALSE,
                         readoptions = NULL) {
   ## assert_scalar_character_or_raw(key)
