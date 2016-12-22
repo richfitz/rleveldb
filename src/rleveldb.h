@@ -35,6 +35,13 @@ SEXP rleveldb_iter_value(SEXP r_it, SEXP r_force_raw, SEXP r_error_if_invalid);
 SEXP rleveldb_snapshot_create(SEXP r_db);
 SEXP rleveldb_snapshot_release(SEXP r_snapshot, SEXP r_error_if_released);
 
+SEXP rleveldb_writebatch_create();
+SEXP rleveldb_writebatch_destroy(SEXP r_writebatch, SEXP error_if_destroyed);
+SEXP rleveldb_writebatch_clear(SEXP r_writebatch);
+SEXP rleveldb_writebatch_put(SEXP r_writebatch, SEXP r_key, SEXP r_value);
+SEXP rleveldb_writebatch_delete(SEXP r_writebatch, SEXP r_key);
+SEXP rleveldb_write(SEXP r_db, SEXP r_writebatch, SEXP r_writeoptions);
+
 SEXP rleveldb_approximate_sizes(SEXP r_db, SEXP r_start_key, SEXP r_limit_key);
 SEXP rleveldb_compact_range(SEXP r_db, SEXP r_start_key, SEXP r_limit_key);
 

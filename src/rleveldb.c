@@ -11,6 +11,8 @@ leveldb_writeoptions_t * default_writeoptions;
 leveldb_t* rleveldb_get_db(SEXP r_db, bool closed_error);
 leveldb_iterator_t* rleveldb_get_iterator(SEXP r_it, bool closed_error);
 leveldb_snapshot_t* rleveldb_get_snapshot(SEXP r_snapshot, bool closed_error);
+leveldb_writebatch_t* rleveldb_get_writebatch(SEXP r_writebatch,
+                                              bool closed_error);
 leveldb_readoptions_t* rleveldb_get_readoptions(SEXP r_readoptions,
                                                 bool closed_error);
 leveldb_writeoptions_t* rleveldb_get_writeoptions(SEXP r_writeoptions,
@@ -20,6 +22,7 @@ leveldb_writeoptions_t* rleveldb_get_writeoptions(SEXP r_writeoptions,
 static void rleveldb_finalize(SEXP r_db);
 static void rleveldb_iter_finalize(SEXP r_it);
 static void rleveldb_snapshot_finalize(SEXP r_snapshot);
+static void rleveldb_writebatch_finalize(SEXP r_writebatch);
 static void rleveldb_readoptions_finalize(SEXP r_readoptions);
 static void rleveldb_writeoptions_finalize(SEXP r_writeoptions);
 
@@ -295,6 +298,68 @@ SEXP rleveldb_snapshot_release(SEXP r_snapshot, SEXP r_error_if_released) {
   return ScalarLogical(snapshot != NULL);
 }
 
+// Batch
+SEXP rleveldb_writebatch_create() {
+  leveldb_writebatch_t *writebatch = leveldb_writebatch_create();
+  SEXP r_writebatch =
+    PROTECT(R_MakeExternalPtr((void*) writebatch, R_NilValue, R_NilValue));
+  R_RegisterCFinalizer(r_writebatch, rleveldb_writebatch_finalize);
+  UNPROTECT(1);
+  return r_writebatch;
+}
+
+SEXP rleveldb_writebatch_destroy(SEXP r_writebatch, SEXP r_error_if_destroyed) {
+  bool error_if_destroyed = scalar_logical(r_error_if_destroyed);
+  leveldb_writebatch_t *writebatch =
+    rleveldb_get_writebatch(r_writebatch, error_if_destroyed);
+  if (writebatch != NULL) {
+    leveldb_writebatch_destroy(writebatch);
+    R_ClearExternalPtr(r_writebatch);
+  }
+  return ScalarLogical(writebatch != NULL);
+}
+
+SEXP rleveldb_writebatch_clear(SEXP r_writebatch) {
+  leveldb_writebatch_t *writebatch =
+    rleveldb_get_writebatch(r_writebatch, true);
+  leveldb_writebatch_clear(writebatch);
+  return R_NilValue;
+}
+
+// TODO: get this working for vectorised key, value without multiple
+// calls to this function.
+SEXP rleveldb_writebatch_put(SEXP r_writebatch, SEXP r_key, SEXP r_value) {
+  leveldb_writebatch_t *writebatch =
+    rleveldb_get_writebatch(r_writebatch, true);
+  const char *key_data = get_key_ptr(r_key),
+    *value_data = get_value_ptr(r_value);
+  size_t key_len = get_key_len(r_key), value_len = get_value_len(r_value);
+  leveldb_writebatch_put(writebatch, key_data, key_len, value_data, value_len);
+  return R_NilValue;
+}
+
+SEXP rleveldb_writebatch_delete(SEXP r_writebatch, SEXP r_key) {
+  leveldb_writebatch_t *writebatch =
+    rleveldb_get_writebatch(r_writebatch, true);
+  const char *key_data = get_key_ptr(r_key);
+  size_t key_len = get_key_len(r_key);
+  leveldb_writebatch_delete(writebatch, key_data, key_len);
+  return R_NilValue;
+}
+
+// NOTE: arguments 2 & 3 transposed with respect to leveldb API
+SEXP rleveldb_write(SEXP r_db, SEXP r_writebatch, SEXP r_writeoptions) {
+  leveldb_t *db = rleveldb_get_db(r_db, true);
+  leveldb_writeoptions_t *writeoptions =
+    rleveldb_get_writeoptions(r_writeoptions, true);
+  leveldb_writebatch_t *writebatch =
+    rleveldb_get_writebatch(r_writebatch, true);
+  char *err = NULL;
+  leveldb_write(db, writeoptions, writebatch, &err);
+  rleveldb_handle_error(err);
+  return R_NilValue;
+}
+
 void rleveldb_approximate_sizes_helper(size_t n, SEXP r_key,
                                        const char **key, size_t *key_len);
 SEXP rleveldb_approximate_sizes(SEXP r_db, SEXP r_start_key, SEXP r_limit_key) {
@@ -498,6 +563,15 @@ void rleveldb_snapshot_finalize(SEXP r_snapshot) {
   }
 }
 
+void rleveldb_writebatch_finalize(SEXP r_writebatch) {
+  leveldb_writebatch_t* writebatch =
+    rleveldb_get_writebatch(r_writebatch, false);
+  if (writebatch) {
+    leveldb_writebatch_destroy(writebatch);
+    R_ClearExternalPtr(r_writebatch);
+  }
+}
+
 void rleveldb_readoptions_finalize(SEXP r_readoptions) {
   leveldb_readoptions_t* readoptions =
     rleveldb_get_readoptions(r_readoptions, false);
@@ -552,6 +626,18 @@ leveldb_snapshot_t* rleveldb_get_snapshot(SEXP r_snapshot, bool closed_error) {
     Rf_error("leveldb snapshot is not open; can't connect");
   }
   return (leveldb_snapshot_t*) snapshot;
+}
+
+leveldb_writebatch_t* rleveldb_get_writebatch(SEXP r_writebatch, bool closed_error) {
+  void *writebatch = NULL;
+  if (TYPEOF(r_writebatch) != EXTPTRSXP) {
+    Rf_error("Expected an external pointer");
+  }
+  writebatch = (leveldb_writebatch_t*) R_ExternalPtrAddr(r_writebatch);
+  if (!writebatch && closed_error) {
+    Rf_error("leveldb writebatch is not open; can't connect");
+  }
+  return (leveldb_writebatch_t*) writebatch;
 }
 
 leveldb_readoptions_t* rleveldb_get_readoptions(SEXP r_readoptions,

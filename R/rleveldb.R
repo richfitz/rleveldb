@@ -92,6 +92,30 @@ leveldb_snapshot_release <- function(snapshot) {
   .Call(Crleveldb_snapshot_release, snapshot)
 }
 
+leveldb_writebatch_create <- function() {
+  .Call(Crleveldb_writebatch_create)
+}
+
+leveldb_writebatch_destroy <- function(writebatch, error_if_destroyed = FALSE) {
+  .Call(Crleveldb_writebatch_destroy, writebatch, error_if_destroyed)
+}
+
+leveldb_writebatch_clear <- function(writebatch) {
+  .Call(Crleveldb_writebatch_clear, writebatch)
+}
+
+leveldb_writebatch_put <- function(writebatch, key, value) {
+  .Call(Crleveldb_writebatch_put, writebatch, key, value)
+}
+
+leveldb_writebatch_delete <- function(writebatch, key) {
+  .Call(Crleveldb_writebatch_delete, writebatch, key)
+}
+
+leveldb_write <- function(db, writebatch, writeoptions = NULL) {
+  .Call(Crleveldb_write, db, writebatch, writeoptions)
+}
+
 leveldb_approximate_sizes <- function(db, start, limit) {
   .Call(Crleveldb_approximate_sizes, db, start, limit)
 }

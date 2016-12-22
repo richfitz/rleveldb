@@ -27,6 +27,13 @@ static const R_CallMethodDef call_methods[] = {
   {"Crleveldb_snapshot_create",    (DL_FUNC) &rleveldb_snapshot_create,    1},
   {"Crleveldb_snapshot_release",   (DL_FUNC) &rleveldb_snapshot_release,   1},
 
+  {"Crleveldb_writebatch_create",  (DL_FUNC) &rleveldb_writebatch_create,  0},
+  {"Crleveldb_writebatch_destroy", (DL_FUNC) &rleveldb_writebatch_destroy, 2},
+  {"Crleveldb_writebatch_clear",   (DL_FUNC) &rleveldb_writebatch_clear,   1},
+  {"Crleveldb_writebatch_put",     (DL_FUNC) &rleveldb_writebatch_put,     3},
+  {"Crleveldb_writebatch_delete",  (DL_FUNC) &rleveldb_writebatch_delete,  2},
+  {"Crleveldb_write",              (DL_FUNC) &rleveldb_write,              3},
+
   {"Crleveldb_approximate_sizes",  (DL_FUNC) &rleveldb_approximate_sizes,  3},
   {"Crleveldb_compact_range",      (DL_FUNC) &rleveldb_compact_range,      3},
 
