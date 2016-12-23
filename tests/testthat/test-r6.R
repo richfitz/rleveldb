@@ -122,3 +122,9 @@ test_that("approximate_sizes", {
   ##
   ## db$approximate_sizes(dat[[1]], dat[[50]]) # 0!
 })
+
+test_that("compact_range", {
+  db <- leveldb(tempfile(), create_if_missing = TRUE)
+  on.exit(db$destroy())
+  expect_null(db$compact_range(as.raw(0), as.raw(255)))
+})

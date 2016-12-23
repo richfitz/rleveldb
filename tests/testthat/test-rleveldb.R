@@ -1,5 +1,9 @@
 context("rleveldb")
 
+## This is the low-level interface that requires a bit more care to
+## use than we can expect users to have; passing naked pointers around
+## really requires checking that they point at the right thing and
+## that's really hard.
 test_that("open, close", {
   db <- leveldb_connect(tempfile(), create_if_missing = TRUE)
   expect_true(leveldb_close(db))
@@ -111,4 +115,16 @@ test_that("properties", {
   expect_null(leveldb_property(db, "nosuchproperty"))
   expect_error(leveldb_property(db, "nosuchproperty", TRUE),
                "No such property 'nosuchproperty'")
+})
+
+test_that("repair", {
+  path <- tempfile()
+  db <- leveldb_connect(path, create_if_missing = TRUE)
+  leveldb_put(db, "foo", "bar")
+  leveldb_close(db)
+  expect_true(leveldb_repair(path))
+  db2 <- leveldb_connect(path)
+  expect_equal(leveldb_get(db2, "foo"), "bar")
+  leveldb_close(db2)
+  unlink(path, recursive = TRUE)
 })
