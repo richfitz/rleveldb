@@ -1,6 +1,6 @@
 context("iterators")
 
-test_that("iterator", {
+test_that("basic", {
   db <- leveldb(tempfile(), create_if_missing = TRUE)
   on.exit(db$destroy())
 
@@ -53,4 +53,9 @@ test_that("iterator", {
   ## can jump back to the end though
   it$seek_to_last()
   expect_true(it$valid())
+
+  expect_true(it$destroy())
+  expect_error(it$valid(), "leveldb iterator is not open")
+  expect_false(it$destroy())
+  expect_error(it$destroy(TRUE), "leveldb iterator is not open")
 })
