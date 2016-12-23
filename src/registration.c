@@ -57,7 +57,10 @@ void R_init_rleveldb(DllInfo *info) {
   default_writeoptions = leveldb_writeoptions_create();
 }
 
+// This can't be easily tested
+// # nocov start
 void R_unload_rleveldb(DllInfo *info) {
   leveldb_readoptions_destroy(default_readoptions);
   leveldb_writeoptions_destroy(default_writeoptions);
 }
+// # nocov end
