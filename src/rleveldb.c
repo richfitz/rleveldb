@@ -421,7 +421,7 @@ SEXP rleveldb_approximate_sizes(SEXP r_db, SEXP r_start_key, SEXP r_limit_key) {
   size_t *start_key_len = NULL, *limit_key_len = NULL;
   size_t
     num_start = get_keys(r_start_key, &start_key, &start_key_len),
-    num_limit = get_keys(r_start_key, &limit_key, &limit_key_len);
+    num_limit = get_keys(r_limit_key, &limit_key, &limit_key_len);
   if (num_start != num_limit) {
     Rf_error("Expected 'limit_key' to be a length %d vector", num_start);
   }

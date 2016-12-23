@@ -5,7 +5,7 @@ size_t get_keys_len(SEXP keys);
 void get_keys_data(size_t len, SEXP keys, const char **data, size_t *data_len);
 
 size_t get_key(SEXP key, const char **key_data) {
-  return get_data(key, key_data, "data");
+  return get_data(key, key_data, "key");
 }
 
 size_t get_value(SEXP value, const char **value_data) {

@@ -22,3 +22,7 @@ key_order <- function(x) {
   tmp <- vapply(x, pad, integer(m), m)
   do.call("order", unname(as.list(as.data.frame(t(tmp)))))
 }
+
+null_pointer <- function() {
+  unserialize(serialize(leveldb_writebatch_create(), NULL))
+}
