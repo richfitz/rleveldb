@@ -76,6 +76,9 @@ R6_leveldb_iterator <- R6::R6Class(
     initialize = function(db, readoptions) {
       self$it <- leveldb_iter_create(db, readoptions)
     },
+    destroy = function(it) {
+      leveldb_iter_destroy(self$it)
+    },
     valid = function() {
       leveldb_iter_valid(self$it)
     },
