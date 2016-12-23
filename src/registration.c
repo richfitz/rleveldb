@@ -25,7 +25,6 @@ static const R_CallMethodDef call_methods[] = {
   {"Crleveldb_iter_value",         (DL_FUNC) &rleveldb_iter_value,         3},
 
   {"Crleveldb_snapshot_create",    (DL_FUNC) &rleveldb_snapshot_create,    1},
-  {"Crleveldb_snapshot_release",   (DL_FUNC) &rleveldb_snapshot_release,   1},
 
   {"Crleveldb_writebatch_create",  (DL_FUNC) &rleveldb_writebatch_create,  0},
   {"Crleveldb_writebatch_destroy", (DL_FUNC) &rleveldb_writebatch_destroy, 2},

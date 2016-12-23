@@ -30,6 +30,7 @@ static void rleveldb_writeoptions_finalize(SEXP r_writeoptions);
 static void rleveldb_cache_finalize(SEXP r_cache);
 static void rleveldb_filterpolicy_finalize(SEXP r_filterpolicy);
 
+
 // Other internals
 void rleveldb_handle_error(char* err);
 leveldb_options_t* rleveldb_collect_options(SEXP r_create_if_missing,
@@ -49,7 +50,6 @@ enum rleveldb_tag_index {
   TAG_CACHE,
   TAG_FILTERPOLICY,
   TAG_ITERATORS,
-  TAG_SNAPSHOTS,
   TAG_LENGTH // don't store anything here!
 };
 
@@ -114,7 +114,6 @@ SEXP rleveldb_connect(SEXP r_name,
   SET_VECTOR_ELT(tag, TAG_CACHE, r_cache);
   SET_VECTOR_ELT(tag, TAG_FILTERPOLICY, r_filterpolicy);
   SET_VECTOR_ELT(tag, TAG_ITERATORS, R_NilValue); // will be a pairlist
-  SET_VECTOR_ELT(tag, TAG_SNAPSHOTS, R_NilValue); // will be a pairlist
 
   SEXP r_db = PROTECT(R_MakeExternalPtr(db, tag, R_NilValue));
   R_RegisterCFinalizer(r_db, rleveldb_finalize);
@@ -145,12 +144,6 @@ SEXP rleveldb_close(SEXP r_db, SEXP r_error_if_closed) {
     while (r_iterators != R_NilValue) {
       rleveldb_iter_destroy(CAR(r_iterators), ScalarLogical(false));
       r_iterators = CDR(r_iterators);
-    }
-
-    SEXP r_snapshots = VECTOR_ELT(tag, TAG_SNAPSHOTS);
-    while (r_snapshots != R_NilValue) {
-      rleveldb_snapshot_release(CAR(r_snapshots), ScalarLogical(false));
-      r_snapshots = CDR(r_snapshots);
     }
 
     leveldb_close(db);
@@ -353,25 +346,8 @@ SEXP rleveldb_snapshot_create(SEXP r_db) {
   SEXP r_snapshot =
     PROTECT(R_MakeExternalPtr((void*) snapshot, r_db, R_NilValue));
   R_RegisterCFinalizer(r_snapshot, rleveldb_snapshot_finalize);
-
-  SEXP db_tag = R_ExternalPtrTag(r_db);
-  SEXP r_snapshots = VECTOR_ELT(db_tag, TAG_SNAPSHOTS);
-  SET_VECTOR_ELT(db_tag, TAG_SNAPSHOTS, CONS(r_snapshot, r_snapshots));
-
   UNPROTECT(1);
   return r_snapshot;
-}
-
-SEXP rleveldb_snapshot_release(SEXP r_snapshot, SEXP r_error_if_released) {
-  bool error_if_relased = scalar_logical(r_error_if_released);
-  const leveldb_snapshot_t *snapshot =
-    rleveldb_get_snapshot(r_snapshot, error_if_relased);
-  if (snapshot != NULL) {
-    leveldb_t *db = rleveldb_get_db(R_ExternalPtrTag(r_snapshot), true);
-    leveldb_release_snapshot(db, snapshot);
-    R_ClearExternalPtr(r_snapshot);
-  }
-  return ScalarLogical(snapshot != NULL);
 }
 
 // Batch

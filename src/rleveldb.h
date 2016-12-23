@@ -33,7 +33,6 @@ SEXP rleveldb_iter_key(SEXP r_it, SEXP r_force_raw, SEXP r_error_if_invalid);
 SEXP rleveldb_iter_value(SEXP r_it, SEXP r_force_raw, SEXP r_error_if_invalid);
 
 SEXP rleveldb_snapshot_create(SEXP r_db);
-SEXP rleveldb_snapshot_release(SEXP r_snapshot, SEXP r_error_if_released);
 
 SEXP rleveldb_writebatch_create();
 SEXP rleveldb_writebatch_destroy(SEXP r_writebatch, SEXP error_if_destroyed);

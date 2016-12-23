@@ -86,11 +86,10 @@ leveldb_iter_value <- function(it, force_raw = FALSE,
 }
 
 leveldb_snapshot <- function(db) {
-  .Call(Crleveldb_snapshot_create, db)
-}
-
-leveldb_snapshot_release <- function(snapshot) {
-  .Call(Crleveldb_snapshot_release, snapshot)
+  ptr <- .Call(Crleveldb_snapshot_create, db)
+  attr(ptr, "timestamp") <- Sys.time()
+  class(ptr) <- "leveldb_snapshot"
+  ptr
 }
 
 leveldb_writebatch_create <- function() {
