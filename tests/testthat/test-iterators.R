@@ -4,7 +4,7 @@ test_that("basic", {
   db <- leveldb(tempfile(), create_if_missing = TRUE)
   on.exit(db$destroy())
 
-  k <- replicate(50, rand_str(rpois(1, 5)))
+  k <- unique(replicate(50, rand_str(rpois(1, 5))))
   v <- replicate(length(k), rand_str(rpois(1, 5)))
   for (i in seq_along(k)) {
     db$put(k[[i]], v[[i]])
@@ -64,7 +64,7 @@ test_that("snapshot", {
   db <- leveldb(tempfile(), create_if_missing = TRUE)
   on.exit(db$destroy())
 
-  k <- replicate(50, rand_str(rpois(1, 5)))
+  k <- unique(replicate(50, rand_str(rpois(1, 5))))
   v <- replicate(length(k), rand_str(rpois(1, 5)))
   i <- seq_len(floor(length(k) / 2))
 
@@ -115,4 +115,35 @@ test_that("snapshot", {
 
   ## With our snapshot we can create new iterators:
   expect_equal(f(db$iterator(leveldb_readoptions(snapshot = snapshot))), res)
+})
+
+test_that("skip cache", {
+  ## This test does not test that skip_cache really skips the cache,
+  ## but mostly tests that it can be passed in and used with no
+  ## trouble.
+  db <- leveldb(tempfile(), create_if_missing = TRUE)
+  on.exit(db$destroy())
+
+  k <- replicate(50, rand_str(rpois(1, 5)))
+  v <- replicate(length(k), rand_str(rpois(1, 5)))
+  for (i in seq_along(k)) {
+    db$put(k[[i]], v[[i]])
+  }
+
+  it <- db$iterator(leveldb_readoptions(fill_cache = FALSE))
+
+  f <- function(it) {
+    res <- list()
+    it$seek_to_first()
+    while (it$valid()) {
+      res[[it$key()]] <- it$value()
+      it$move_next()
+    }
+    res
+  }
+
+  res <- f(it)
+  kk <- db$keys()
+  cmp <- setNames(lapply(kk, db$get), kk)
+  expect_equal(res, cmp)
 })
