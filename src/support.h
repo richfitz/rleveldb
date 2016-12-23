@@ -1,14 +1,12 @@
 #include <stdbool.h>
 #include <R.h>
 #include <Rinternals.h>
+
+size_t get_key(SEXP key, const char **key_data);
+size_t get_value(SEXP value, const char **value_data);
+size_t get_keys(SEXP keys, const char ***key_data, size_t **key_len);
+
 bool is_raw_string(const char* str, size_t len);
-size_t get_key_len(SEXP key);
-const char* get_key_ptr(SEXP key);
-size_t get_value_len(SEXP key);
-const char* get_value_ptr(SEXP key);
-size_t get_keys_len(SEXP keys);
-void get_keys_data(size_t len, SEXP keys, const char **data, size_t *data_len);
-size_t get_keys(SEXP keys, const char ***data, size_t **data_len);
 SEXP raw_string_to_sexp(const char *str, size_t len, bool force_raw);
 bool scalar_logical(SEXP x);
 size_t scalar_size(SEXP x);

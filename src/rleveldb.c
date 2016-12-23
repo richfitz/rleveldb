@@ -6,7 +6,6 @@
 
 leveldb_readoptions_t * default_readoptions;
 leveldb_writeoptions_t * default_writeoptions;
-
 // Internals:
 leveldb_t* rleveldb_get_db(SEXP r_db, bool closed_error);
 leveldb_iterator_t* rleveldb_get_iterator(SEXP r_it, bool closed_error);
@@ -192,8 +191,9 @@ SEXP rleveldb_property(SEXP r_db, SEXP r_name, SEXP r_error_if_missing) {
 SEXP rleveldb_get(SEXP r_db, SEXP r_key, SEXP r_force_raw,
                   SEXP r_error_if_missing, SEXP r_readoptions) {
   leveldb_t *db = rleveldb_get_db(r_db, true);
-  const char *key_data = get_key_ptr(r_key);
-  size_t key_len = get_key_len(r_key);
+  const char *key_data = NULL;
+  size_t key_len = get_key(r_key, &key_data);
+
   bool force_raw = scalar_logical(r_force_raw),
     error_if_missing = scalar_logical(r_error_if_missing);
   leveldb_readoptions_t *readoptions =
@@ -221,9 +221,10 @@ SEXP rleveldb_get(SEXP r_db, SEXP r_key, SEXP r_force_raw,
 
 SEXP rleveldb_put(SEXP r_db, SEXP r_key, SEXP r_value, SEXP r_writeoptions) {
   leveldb_t *db = rleveldb_get_db(r_db, true);
-  const char *key_data = get_key_ptr(r_key),
-    *value_data = get_value_ptr(r_value);
-  size_t key_len = get_key_len(r_key), value_len = get_value_len(r_value);
+  const char *key_data = NULL, *value_data = NULL;
+  size_t
+    key_len = get_key(r_key, &key_data),
+    value_len = get_value(r_value, &value_data);
   leveldb_writeoptions_t *writeoptions =
     rleveldb_get_writeoptions(r_writeoptions, true);
 
@@ -236,8 +237,8 @@ SEXP rleveldb_put(SEXP r_db, SEXP r_key, SEXP r_value, SEXP r_writeoptions) {
 
 SEXP rleveldb_delete(SEXP r_db, SEXP r_key, SEXP r_writeoptions) {
   leveldb_t *db = rleveldb_get_db(r_db, true);
-  const char *key_data = get_key_ptr(r_key);
-  size_t key_len = get_key_len(r_key);
+  const char *key_data = NULL;
+  size_t key_len = get_key(r_key, &key_data);
   leveldb_writeoptions_t *writeoptions =
     rleveldb_get_writeoptions(r_writeoptions, true);
 
@@ -295,8 +296,8 @@ SEXP rleveldb_iter_seek_to_last(SEXP r_it) {
 
 SEXP rleveldb_iter_seek(SEXP r_it, SEXP r_key) {
   leveldb_iterator_t *it = rleveldb_get_iterator(r_it, true);
-  const char *key_data = get_key_ptr(r_key);
-  size_t key_len = get_key_len(r_key);
+  const char *key_data = NULL;
+  size_t key_len = get_key(r_key, &key_data);
   leveldb_iter_seek(it, key_data, key_len);
   return R_NilValue;
 }
@@ -383,9 +384,10 @@ SEXP rleveldb_writebatch_clear(SEXP r_writebatch) {
 SEXP rleveldb_writebatch_put(SEXP r_writebatch, SEXP r_key, SEXP r_value) {
   leveldb_writebatch_t *writebatch =
     rleveldb_get_writebatch(r_writebatch, true);
-  const char *key_data = get_key_ptr(r_key),
-    *value_data = get_value_ptr(r_value);
-  size_t key_len = get_key_len(r_key), value_len = get_value_len(r_value);
+  const char *key_data = NULL, *value_data = NULL;
+  size_t
+    key_len = get_key(r_key, &key_data),
+    value_len = get_value(r_value, &value_data);
   leveldb_writebatch_put(writebatch, key_data, key_len, value_data, value_len);
   return R_NilValue;
 }
@@ -393,8 +395,8 @@ SEXP rleveldb_writebatch_put(SEXP r_writebatch, SEXP r_key, SEXP r_value) {
 SEXP rleveldb_writebatch_delete(SEXP r_writebatch, SEXP r_key) {
   leveldb_writebatch_t *writebatch =
     rleveldb_get_writebatch(r_writebatch, true);
-  const char *key_data = get_key_ptr(r_key);
-  size_t key_len = get_key_len(r_key);
+  const char *key_data = NULL;
+  size_t key_len = get_key(r_key, &key_data);
   leveldb_writebatch_delete(writebatch, key_data, key_len);
   return R_NilValue;
 }
@@ -440,12 +442,10 @@ SEXP rleveldb_approximate_sizes(SEXP r_db, SEXP r_start_key, SEXP r_limit_key) {
 
 SEXP rleveldb_compact_range(SEXP r_db, SEXP r_start_key, SEXP r_limit_key) {
   leveldb_t *db = rleveldb_get_db(r_db, true);
-  const char
-    *start_key = get_key_ptr(r_start_key),
-    *limit_key = get_key_ptr(r_limit_key);
+  const char *start_key = NULL, *limit_key = NULL;
   size_t
-    start_key_len = get_key_len(r_start_key),
-    limit_key_len = get_key_len(r_limit_key);
+    start_key_len = get_key(r_start_key, &start_key),
+    limit_key_len = get_key(r_limit_key, &limit_key);
   leveldb_compact_range(db, start_key, start_key_len, limit_key, limit_key_len);
   return R_NilValue;
 }
@@ -542,8 +542,8 @@ SEXP rleveldb_keys_len(SEXP r_db, SEXP r_readoptions) {
 
 SEXP rleveldb_exists(SEXP r_db, SEXP r_key, SEXP r_readoptions) {
   leveldb_t *db = rleveldb_get_db(r_db, true);
-  const char *key_data = get_key_ptr(r_key);
-  size_t key_len = get_key_len(r_key);
+  const char *key_data = NULL;
+  size_t key_len = get_key(r_key, &key_data);
   leveldb_readoptions_t *readoptions =
     rleveldb_get_readoptions(r_readoptions, true);
   return ScalarLogical(rleveldb_get_exists(db, key_data, key_len, readoptions));

@@ -41,7 +41,7 @@ test_that("bulk write", {
   on.exit(db$destroy())
 
   wb <- db$writebatch()
-  k <- replicate(50, rand_str(rpois(1, 5)))
+  k <- unique(replicate(50, rand_str(rpois(1, 5))))
   v <- replicate(length(k), rand_str(rpois(1, 5)))
   for (i in seq_along(k)) {
     wb$put(k[[i]], v[[i]])
@@ -57,7 +57,7 @@ test_that("bulk delete", {
   db <- leveldb(tempfile(), create_if_missing = TRUE)
   on.exit(db$destroy())
 
-  k <- replicate(50, rand_str(rpois(1, 5)))
+  k <- unique(replicate(50, rand_str(rpois(1, 5))))
   v <- replicate(length(k), rand_str(rpois(1, 5)))
   for (i in seq_along(k)) {
     db$put(k[[i]], v[[i]])
