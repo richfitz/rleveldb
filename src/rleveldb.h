@@ -7,9 +7,9 @@ SEXP rleveldb_connect(SEXP r_name,
                       SEXP r_paranoid_checks,
                       SEXP r_write_buffer_size,
                       SEXP r_max_open_files,
-                      SEXP r_cache_capacity,
                       SEXP r_block_size,
                       SEXP r_use_compression,
+                      SEXP r_cache_capacity,
                       SEXP r_bloom_filter_bits_per_key);
 SEXP rleveldb_close(SEXP r_db, SEXP r_error_if_closed);
 SEXP rleveldb_destroy(SEXP r_name);

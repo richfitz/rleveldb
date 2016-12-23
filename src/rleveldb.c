@@ -27,6 +27,8 @@ static void rleveldb_snapshot_finalize(SEXP r_snapshot);
 static void rleveldb_writebatch_finalize(SEXP r_writebatch);
 static void rleveldb_readoptions_finalize(SEXP r_readoptions);
 static void rleveldb_writeoptions_finalize(SEXP r_writeoptions);
+static void rleveldb_cache_finalize(SEXP r_cache);
+static void rleveldb_filterpolicy_finalize(SEXP r_filterpolicy);
 
 // Other internals
 void rleveldb_handle_error(char* err);
@@ -35,10 +37,8 @@ leveldb_options_t* rleveldb_collect_options(SEXP r_create_if_missing,
                                             SEXP r_paranoid_checks,
                                             SEXP r_write_buffer_size,
                                             SEXP r_max_open_files,
-                                            SEXP r_cache_capacity,
                                             SEXP r_block_size,
-                                            SEXP r_use_compression,
-                                            SEXP r_bloom_filter_bits_per_key);
+                                            SEXP r_use_compression);
 // Slightly different
 size_t rleveldb_get_keys_len(leveldb_t *db, leveldb_readoptions_t *readoptions);
 bool rleveldb_get_exists(leveldb_t *db, const char *key_data, size_t key_len,
@@ -60,23 +60,50 @@ SEXP rleveldb_connect(SEXP r_name,
                       SEXP r_paranoid_checks,
                       SEXP r_write_buffer_size,
                       SEXP r_max_open_files,
-                      SEXP r_cache_capacity,
                       SEXP r_block_size,
                       SEXP r_use_compression,
+                      SEXP r_cache_capacity,
                       SEXP r_bloom_filter_bits_per_key) {
-  // Unimplemented:
-  // * general set_filter_policy
+  // Unimplemented options:
+  // * a general set_filter_policy
   // * set_env
   // * set_info_log
   // * set_comparator
   // * restart_interval
+  //
+  // There is some gymnastics here to avoid leaking in the case of an
+  // R error (perhaps thrown by the coersion functions).
+  SEXP r_cache = R_NilValue, r_filterpolicy = R_NilValue;
+  leveldb_cache_t* cache = NULL;
+  leveldb_filterpolicy_t* filterpolicy = NULL;
+  bool
+    has_cache = r_cache != R_NilValue,
+    has_filterpolicy = r_bloom_filter_bits_per_key != R_NilValue;
+  if (has_cache) {
+    cache = leveldb_cache_create_lru(scalar_size(r_cache_capacity));
+    r_cache = PROTECT(R_MakeExternalPtr(cache, R_NilValue, R_NilValue));
+    R_RegisterCFinalizer(r_cache, rleveldb_cache_finalize);
+  }
+  if (has_filterpolicy) {
+    size_t bits_per_key = scalar_size(r_bloom_filter_bits_per_key);
+    filterpolicy = leveldb_filterpolicy_create_bloom(bits_per_key);
+    r_filterpolicy =
+      PROTECT(R_MakeExternalPtr(filterpolicy, R_NilValue, R_NilValue));
+    R_RegisterCFinalizer(r_filterpolicy, rleveldb_filterpolicy_finalize);
+  }
   const char *name = scalar_character(r_name);
   leveldb_options_t *options =
     rleveldb_collect_options(r_create_if_missing, r_error_if_exists,
                              r_paranoid_checks, r_write_buffer_size,
-                             r_max_open_files, r_cache_capacity,
-                             r_block_size, r_use_compression,
-                             r_bloom_filter_bits_per_key);
+                             r_max_open_files, r_block_size,
+                             r_use_compression);
+  if (has_cache) {
+    leveldb_options_set_cache(options, cache);
+  }
+  if (has_filterpolicy) {
+    leveldb_options_set_filter_policy(options, filterpolicy);
+  }
+
   char *err = NULL;
   leveldb_t *db = leveldb_open(options, name, &err);
   leveldb_free(options);
@@ -84,16 +111,14 @@ SEXP rleveldb_connect(SEXP r_name,
 
   SEXP tag = PROTECT(allocVector(VECSXP, TAG_LENGTH));
   SET_VECTOR_ELT(tag, TAG_NAME, r_name);
-  // TODO: need to do more work here for cache and filterpolicy
-  SET_VECTOR_ELT(tag, TAG_CACHE, R_NilValue);
-  SET_VECTOR_ELT(tag, TAG_FILTERPOLICY, R_NilValue);
-  // NOTE: these are the last elements of a pairlist
-  SET_VECTOR_ELT(tag, TAG_ITERATORS, R_NilValue);
-  SET_VECTOR_ELT(tag, TAG_SNAPSHOTS, R_NilValue);
+  SET_VECTOR_ELT(tag, TAG_CACHE, r_cache);
+  SET_VECTOR_ELT(tag, TAG_FILTERPOLICY, r_filterpolicy);
+  SET_VECTOR_ELT(tag, TAG_ITERATORS, R_NilValue); // will be a pairlist
+  SET_VECTOR_ELT(tag, TAG_SNAPSHOTS, R_NilValue); // will be a pairlist
 
   SEXP r_db = PROTECT(R_MakeExternalPtr(db, tag, R_NilValue));
   R_RegisterCFinalizer(r_db, rleveldb_finalize);
-  UNPROTECT(2);
+  UNPROTECT(2 + has_cache + has_filterpolicy);
   return r_db;
 }
 
@@ -641,6 +666,27 @@ void rleveldb_writeoptions_finalize(SEXP r_writeoptions) {
   }
 }
 
+void rleveldb_cache_finalize(SEXP r_cache) {
+  if (TYPEOF(r_cache) == EXTPTRSXP) {
+    leveldb_cache_t* cache = (leveldb_cache_t*) R_ExternalPtrAddr(r_cache);
+    if (cache) {
+      leveldb_cache_destroy(cache);
+      R_ClearExternalPtr(r_cache);
+    }
+  }
+}
+
+void rleveldb_filterpolicy_finalize(SEXP r_filterpolicy) {
+  if (TYPEOF(r_filterpolicy) == EXTPTRSXP) {
+    leveldb_filterpolicy_t* filterpolicy =
+      (leveldb_filterpolicy_t*) R_ExternalPtrAddr(r_filterpolicy);
+    if (filterpolicy) {
+      leveldb_filterpolicy_destroy(filterpolicy);
+      R_ClearExternalPtr(r_filterpolicy);
+    }
+  }
+}
+
 leveldb_t* rleveldb_get_db(SEXP r_db, bool closed_error) {
   void *db = NULL;
   if (TYPEOF(r_db) != EXTPTRSXP) {
@@ -759,6 +805,7 @@ bool rleveldb_get_exists(leveldb_t *db, const char *key_data, size_t key_len,
       found = true;
     }
   }
+  leveldb_iter_destroy(it);
   return found;
 }
 
@@ -767,13 +814,14 @@ leveldb_options_t* rleveldb_collect_options(SEXP r_create_if_missing,
                                             SEXP r_paranoid_checks,
                                             SEXP r_write_buffer_size,
                                             SEXP r_max_open_files,
-                                            SEXP r_cache_capacity,
                                             SEXP r_block_size,
-                                            SEXP r_use_compression,
-                                            SEXP r_bloom_filter_bits_per_key) {
+                                            SEXP r_use_compression) {
   leveldb_options_t *options = leveldb_options_create();
   // TODO: put a finaliser on options so that we can error safely in
-  // the scalar_logical commands
+  // the scalar_logical commands on early exit.  Otherwise there is
+  // not really a wonderful way of doing this.  The simplest route
+  // would be to check on the R side really and then we don't have to
+  // do any of the hard work.
   if (r_create_if_missing != R_NilValue) {
     leveldb_options_set_create_if_missing(options,
                                           scalar_logical(r_create_if_missing));
@@ -794,14 +842,6 @@ leveldb_options_t* rleveldb_collect_options(SEXP r_create_if_missing,
     leveldb_options_set_max_open_files(options,
                                        scalar_size(r_max_open_files));
   }
-  if (r_cache_capacity != R_NilValue) {
-    // TODO: not clear when we have to delete this.  Will it be done
-    // for us?  I think that we might have to do this when cleaning up
-    // the options?
-    size_t capacity = scalar_size(r_cache_capacity);
-    leveldb_cache_t* cache = leveldb_cache_create_lru(capacity);
-    leveldb_options_set_cache(options, cache);
-  }
   if (r_block_size != R_NilValue) {
     leveldb_options_set_block_size(options,
                                    scalar_size(r_block_size));
@@ -809,12 +849,6 @@ leveldb_options_t* rleveldb_collect_options(SEXP r_create_if_missing,
   if (r_use_compression != R_NilValue) {
     leveldb_options_set_compression(options,
                                     scalar_logical(r_use_compression));
-  }
-  if (r_bloom_filter_bits_per_key != R_NilValue) {
-    size_t bits_per_key = scalar_size(r_bloom_filter_bits_per_key);
-    leveldb_filterpolicy_t* filter =
-      leveldb_filterpolicy_create_bloom(bits_per_key);
-    leveldb_options_set_filter_policy(options, filter);
   }
 
   return options;
