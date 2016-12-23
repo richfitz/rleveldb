@@ -55,6 +55,39 @@ const char* get_value_ptr(SEXP value) {
   return get_data_ptr(value, "value");
 }
 
+size_t get_keys_len(SEXP keys) {
+  return TYPEOF(keys) == RAWSXP ? 1 : (size_t)length(keys);
+}
+
+void get_keys_data(size_t len, SEXP keys, const char **data, size_t *data_len) {
+  if (TYPEOF(keys) == RAWSXP) {
+    data[0] = (char*) RAW(keys);
+    data_len[0] = length(keys);
+  } else if (TYPEOF(keys) == STRSXP) {
+    for (size_t i = 0; i < len; ++i) {
+      SEXP s = STRING_ELT(keys, i);
+      data[i] = CHAR(s);
+      data_len[i] = length(s);
+    }
+  } else if (TYPEOF(keys) == VECSXP) {
+    for (size_t i = 0; i < len; ++i) {
+      SEXP s = VECTOR_ELT(keys, i);
+      data[i] = get_key_ptr(s);
+      data_len[i] = get_key_len(s);
+    }
+  } else {
+    Rf_error("Invalid type; expected a character or raw vector");
+  }
+}
+
+size_t get_keys(SEXP keys, const char ***data, size_t **data_len) {
+  size_t len = get_keys_len(keys);
+  *data = (const char**)R_alloc(len, sizeof(const char*));
+  *data_len = (size_t*)R_alloc(len, sizeof(size_t));
+  get_keys_data(len, keys, *data, *data_len);
+  return len;
+}
+
 // This is the same strategy as redux.
 SEXP raw_string_to_sexp(const char *str, size_t len, bool force_raw) {
   bool is_raw = force_raw || is_raw_string(str, len);

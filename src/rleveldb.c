@@ -412,60 +412,30 @@ SEXP rleveldb_write(SEXP r_db, SEXP r_writebatch, SEXP r_writeoptions) {
   return R_NilValue;
 }
 
-void rleveldb_approximate_sizes_helper(size_t n, SEXP r_key,
-                                       const char **key, size_t *key_len);
 SEXP rleveldb_approximate_sizes(SEXP r_db, SEXP r_start_key, SEXP r_limit_key) {
   leveldb_t *db = rleveldb_get_db(r_db, true);
+
+  const char **start_key = NULL, **limit_key = NULL;
+  size_t *start_key_len = NULL, *limit_key_len = NULL;
   size_t
-    num_ranges = TYPEOF(r_start_key) == RAWSXP ? 1 : length(r_start_key),
-    num_limit  = TYPEOF(r_limit_key) == RAWSXP ? 1 : length(r_limit_key);
-  if (num_limit != num_ranges) {
-    Rf_error("Expected 'limit_key' to be a length %d vector", num_ranges);
+    num_start = get_keys(r_start_key, &start_key, &start_key_len),
+    num_limit = get_keys(r_start_key, &limit_key, &limit_key_len);
+  if (num_start != num_limit) {
+    Rf_error("Expected 'limit_key' to be a length %d vector", num_start);
   }
-  const char
-    **start_key = (const char**)R_alloc(num_ranges, sizeof(const char*)),
-    **limit_key = (const char**)R_alloc(num_ranges, sizeof(const char*));
-  size_t
-    *start_key_len = (size_t*) R_alloc(num_ranges, sizeof(size_t)),
-    *limit_key_len = (size_t*) R_alloc(num_ranges, sizeof(size_t));
-  rleveldb_approximate_sizes_helper(num_ranges, r_start_key,
-                                    start_key, start_key_len);
-  rleveldb_approximate_sizes_helper(num_ranges, r_limit_key,
-                                    limit_key, limit_key_len);
-  uint64_t *sizes = (uint64_t*)R_alloc(num_ranges, sizeof(uint64_t));
-  leveldb_approximate_sizes(db, num_ranges,
+
+  uint64_t *sizes = (uint64_t*)R_alloc(num_start, sizeof(uint64_t));
+  leveldb_approximate_sizes(db, num_start,
                             start_key, start_key_len,
                             limit_key, limit_key_len,
                             sizes);
-  SEXP ret = PROTECT(allocVector(INTSXP, num_ranges));
+  SEXP ret = PROTECT(allocVector(INTSXP, num_start));
   int *isizes = INTEGER(ret);
-  for (size_t i = 0; i < num_ranges; ++i) {
+  for (size_t i = 0; i < num_start; ++i) {
     isizes[i] = sizes[i];
   }
   UNPROTECT(1);
   return ret;
-}
-
-void rleveldb_approximate_sizes_helper(size_t n, SEXP r_key,
-                                       const char **key, size_t *key_len) {
-  if (TYPEOF(r_key) == RAWSXP) {
-    key[0] = (char*) RAW(r_key);
-    key_len[0] = length(r_key);
-  } else if (TYPEOF(r_key) == STRSXP) {
-    for (size_t i = 0; i < n; ++i) {
-      SEXP s = STRING_ELT(r_key, i);
-      key[i] = CHAR(s);
-      key_len[i] = length(s);
-    }
-  } else if (TYPEOF(r_key) == VECSXP) {
-    for (size_t i = 0; i < n; ++i) {
-      SEXP s = VECTOR_ELT(r_key, i);
-      key[i] = get_key_ptr(s);
-      key_len[i] = get_key_len(s);
-    }
-  } else {
-    Rf_error("Invalid type; expected a character or raw vector");
-  }
 }
 
 SEXP rleveldb_compact_range(SEXP r_db, SEXP r_start_key, SEXP r_limit_key) {
