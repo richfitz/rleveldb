@@ -1,13 +1,13 @@
 ##' @importFrom R6 R6Class
 leveldb <- function(name, create_if_missing = NULL,
-                            error_if_exists = NULL,
-                            paranoid_checks = NULL,
-                            write_buffer_size = NULL,
-                            max_open_files = NULL,
-                            cache_capacity = NULL,
-                            block_size = NULL,
-                            use_compression = NULL,
-                            bloom_filter_bits_per_key = NULL) {
+                    error_if_exists = NULL,
+                    paranoid_checks = NULL,
+                    write_buffer_size = NULL,
+                    max_open_files = NULL,
+                    cache_capacity = NULL,
+                    block_size = NULL,
+                    use_compression = NULL,
+                    bloom_filter_bits_per_key = NULL) {
   R6_leveldb$new(name, create_if_missing, error_if_exists,
                  paranoid_checks, write_buffer_size, max_open_files,
                  cache_capacity, block_size, use_compression,
@@ -120,6 +120,9 @@ R6_leveldb_writebatch <- R6::R6Class(
       self$db <- db
       self$ptr <- leveldb_writebatch_create()
     },
+    destroy = function(error_if_destroyed = FALSE) {
+      leveldb_writebatch_destroy(self$ptr, error_if_destroyed)
+    },
     clear = function() {
       leveldb_writebatch_clear(self$ptr)
       invisible(self)
@@ -134,5 +137,6 @@ R6_leveldb_writebatch <- R6::R6Class(
     },
     write = function(writeoptions = NULL) {
       leveldb_write(self$db, self$ptr, writeoptions)
+      invisible(self)
     }
   ))
