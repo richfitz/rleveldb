@@ -16,7 +16,7 @@ SEXP rleveldb_destroy(SEXP r_name);
 SEXP rleveldb_repair(SEXP r_name);
 SEXP rleveldb_property(SEXP r_db, SEXP r_name, SEXP r_error_if_missing);
 
-SEXP rleveldb_get(SEXP r_db, SEXP r_key, SEXP r_force_raw,
+SEXP rleveldb_get(SEXP r_db, SEXP r_key, SEXP r_as_raw,
                   SEXP r_error_if_missing, SEXP r_readoptions);
 SEXP rleveldb_put(SEXP r_db, SEXP r_key, SEXP r_value, SEXP r_writeoptions);
 SEXP rleveldb_delete(SEXP r_db, SEXP r_key, SEXP r_writeoptions);
@@ -29,8 +29,8 @@ SEXP rleveldb_iter_seek_to_last(SEXP r_it);
 SEXP rleveldb_iter_seek(SEXP r_it, SEXP r_key);
 SEXP rleveldb_iter_next(SEXP r_it, SEXP r_error_if_invalid);
 SEXP rleveldb_iter_prev(SEXP r_it, SEXP r_error_if_invalid);
-SEXP rleveldb_iter_key(SEXP r_it, SEXP r_force_raw, SEXP r_error_if_invalid);
-SEXP rleveldb_iter_value(SEXP r_it, SEXP r_force_raw, SEXP r_error_if_invalid);
+SEXP rleveldb_iter_key(SEXP r_it, SEXP r_as_raw, SEXP r_error_if_invalid);
+SEXP rleveldb_iter_value(SEXP r_it, SEXP r_as_raw, SEXP r_error_if_invalid);
 
 SEXP rleveldb_snapshot_create(SEXP r_db);
 

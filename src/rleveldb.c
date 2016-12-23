@@ -188,14 +188,14 @@ SEXP rleveldb_property(SEXP r_db, SEXP r_name, SEXP r_error_if_missing) {
   return ret;
 }
 
-SEXP rleveldb_get(SEXP r_db, SEXP r_key, SEXP r_force_raw,
+SEXP rleveldb_get(SEXP r_db, SEXP r_key, SEXP r_as_raw,
                   SEXP r_error_if_missing, SEXP r_readoptions) {
   leveldb_t *db = rleveldb_get_db(r_db, true);
   const char *key_data = NULL;
   size_t key_len = get_key(r_key, &key_data);
 
-  bool force_raw = scalar_logical(r_force_raw),
-    error_if_missing = scalar_logical(r_error_if_missing);
+  bool error_if_missing = scalar_logical(r_error_if_missing);
+  return_as as_raw = to_return_as(r_as_raw);
   leveldb_readoptions_t *readoptions =
     rleveldb_get_readoptions(r_readoptions, true);
 
@@ -206,7 +206,7 @@ SEXP rleveldb_get(SEXP r_db, SEXP r_key, SEXP r_force_raw,
 
   SEXP ret;
   if (read != NULL) {
-    ret = raw_string_to_sexp(read, read_len, force_raw);
+    ret = raw_string_to_sexp(read, read_len, as_raw);
     leveldb_free(read);
   } else if (!error_if_missing) {
     ret = R_NilValue;
@@ -318,26 +318,26 @@ SEXP rleveldb_iter_prev(SEXP r_it, SEXP r_error_if_invalid) {
   return R_NilValue;
 }
 
-SEXP rleveldb_iter_key(SEXP r_it, SEXP r_force_raw, SEXP r_error_if_invalid) {
+SEXP rleveldb_iter_key(SEXP r_it, SEXP r_as_raw, SEXP r_error_if_invalid) {
   leveldb_iterator_t *it = rleveldb_get_iterator(r_it, true);
-  bool force_raw = scalar_logical(r_force_raw);
+  return_as as_raw = to_return_as(r_as_raw);
   size_t len;
   if (!check_iterator(it, r_error_if_invalid)) {
     return R_NilValue;
   }
   const char *data = leveldb_iter_key(it, &len);
-  return raw_string_to_sexp(data, len, force_raw);
+  return raw_string_to_sexp(data, len, as_raw);
 }
 
-SEXP rleveldb_iter_value(SEXP r_it, SEXP r_force_raw, SEXP r_error_if_invalid) {
+SEXP rleveldb_iter_value(SEXP r_it, SEXP r_as_raw, SEXP r_error_if_invalid) {
   leveldb_iterator_t *it = rleveldb_get_iterator(r_it, true);
-  bool force_raw = scalar_logical(r_force_raw);
+  return_as as_raw = to_return_as(r_as_raw);
   if (!check_iterator(it, r_error_if_invalid)) {
     return R_NilValue;
   }
   size_t len;
   const char *data = leveldb_iter_value(it, &len);
-  return raw_string_to_sexp(data, len, force_raw);
+  return raw_string_to_sexp(data, len, as_raw);
 }
 
 // Snapshots
@@ -490,41 +490,33 @@ SEXP rleveldb_writeoptions(SEXP r_sync) {
 }
 
 // Built on top of the leveldb api:
+
+// TODO: at the moment this works with two passes; one computes the
+// number of keys and the other collects the keys.  That's not a bad
+// call, really, but it would be nice to be able to *collect* things.
+// To do that efficiently we need a growing data structure.  It's
+// possible that pairlists may accomplish that fairly effectively.
+// This is going to be needed for a "match pattern" find function,
+// though the bigger hurdle is going to be doing any sort of actual
+// pattern matching aside from "starts with"
 SEXP rleveldb_keys(SEXP r_db, SEXP r_as_raw, SEXP r_readoptions) {
   leveldb_t *db = rleveldb_get_db(r_db, true);
-  bool as_raw = scalar_logical(r_as_raw);
+  return_as as_raw = to_return_as(r_as_raw);
   leveldb_readoptions_t *readoptions =
     rleveldb_get_readoptions(r_readoptions, true);
-
   size_t n = rleveldb_get_keys_len(db, readoptions);
-  SEXP ret = PROTECT(allocVector(as_raw ? VECSXP : STRSXP, n));
-
-  // TODO: at the moment this works with two passes; one computes the
-  // number of keys and the other collects the keys.  That's not a bad
-  // call, really, but it would be nice to be able to *collect*
-  // things.  To do that efficiently we need a growing data structure.
-  // It's possible that pairlists may accomplish that fairly
-  // effectively.  This is going to be needed for a "match pattern"
-  // find function, though the bigger hurdle is going to be doing any
-  // sort of actual pattern matching aside from "starts with"
+  bool as_string = as_raw == AS_STRING;
+  SEXP ret = PROTECT(allocVector(as_string ? STRSXP : VECSXP, n));
 
   leveldb_iterator_t *it = leveldb_create_iterator(db, readoptions);
   leveldb_iter_seek_to_first(it);
   size_t key_len;
   for (size_t i = 0; i < n; ++i, leveldb_iter_next(it)) {
     const char *key_data = leveldb_iter_key(it, &key_len);
-    if (as_raw) {
-      SET_VECTOR_ELT(ret, i, allocVector(RAWSXP, key_len));
-      memcpy(RAW(VECTOR_ELT(ret, i)), key_data, key_len);
-    } else {
-      // TODO: consider here checking that we do make a string of the
-      // correct size?  If so we can throw an error and require that
-      // bytes are used.
-      //
-      // TODO: if this throws an R error, we leak iterators.  It would
-      // be nice to put a wrapper around the iterator (creating a
-      // reference) so that R will clean it up for us later.
+    if (as_string) {
       SET_STRING_ELT(ret, i, mkCharLen(key_data, key_len));
+    } else {
+      SET_VECTOR_ELT(ret, i, raw_string_to_sexp(key_data, key_len, as_raw));
     }
   }
   leveldb_iter_destroy(it);

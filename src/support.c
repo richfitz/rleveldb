@@ -61,39 +61,30 @@ void get_keys_data(size_t len, SEXP keys, const char **data, size_t *data_len) {
   }
 }
 
-bool is_raw_string(const char* str, size_t len) {
-  if (len > 2) {
-    if ((str[0] == 'X' || str[0] == 'B') && str[1] == '\n') {
-      for (size_t i = 0; i < len; ++i) {
-        if (str[i] == '\0') {
-          return true;
-        }
-      }
+bool is_raw_string(const char* str, size_t len, return_as as) {
+  if (as == AS_RAW) {
+    return true;
+  } else {
+    bool has_raw = memchr(str, '\0', len) != NULL;
+    if (has_raw && as == AS_STRING) {
+      Rf_error("Value contains embedded nul bytes; cannot return string");
     }
+    return has_raw;
   }
-  return false;
 }
 
 // This is the same strategy as redux.
-SEXP raw_string_to_sexp(const char *str, size_t len, bool force_raw) {
-  bool is_raw = force_raw || is_raw_string(str, len);
+SEXP raw_string_to_sexp(const char *str, size_t len, return_as as) {
+  bool is_raw = is_raw_string(str, len, as);
   SEXP ret;
   if (is_raw) {
     ret = PROTECT(allocVector(RAWSXP, len));
     memcpy(RAW(ret), str, len);
-    UNPROTECT(1);
   } else {
     ret = PROTECT(allocVector(STRSXP, 1));
     SET_STRING_ELT(ret, 0, mkCharLen(str, len));
-    const size_t slen = LENGTH(STRING_ELT(ret, 0));
-    if (slen < len) {
-      ret = PROTECT(allocVector(RAWSXP, len));
-      memcpy(RAW(ret), str, len);
-      UNPROTECT(2);
-    } else {
-      UNPROTECT(1);
-    }
   }
+  UNPROTECT(1);
   return ret;
 }
 
@@ -108,6 +99,21 @@ bool scalar_logical(SEXP x) {
   } else {
     Rf_error("Expected a logical scalar");
     return 0;
+  }
+}
+
+return_as to_return_as(SEXP x) {
+  if (x == R_NilValue) {
+    return AS_ANY;
+  } else if (TYPEOF(x) == LGLSXP && LENGTH(x) == 1) {
+    int as_raw = INTEGER(x)[0];
+    if (as_raw == NA_LOGICAL) {
+      Rf_error("Expected a non-missing logical scalar (or NULL)");
+    }
+    return as_raw ? AS_RAW : AS_STRING;
+  } else {
+    Rf_error("Expected a logical scalar (or NULL)");
+    return AS_ANY;
   }
 }
 

@@ -83,11 +83,13 @@ test_that("keys", {
   db <- leveldb_connect(tempfile(), create_if_missing = TRUE)
   expect_identical(leveldb_keys_len(db), 0L)
   expect_identical(leveldb_keys(db, TRUE), list())
+  expect_identical(leveldb_keys(db, NULL), list())
   expect_identical(leveldb_keys(db, FALSE), character(0))
 
   leveldb_put(db, "foo", "bar")
   expect_identical(leveldb_keys_len(db), 1L)
   expect_equal(leveldb_keys(db, TRUE), list(charToRaw("foo")))
+  expect_equal(leveldb_keys(db, NULL), list("foo"))
   expect_equal(leveldb_keys(db, FALSE), "foo")
 
   expect_null(leveldb_delete(db, "foo"))
@@ -127,4 +129,41 @@ test_that("repair", {
   expect_equal(leveldb_get(db2, "foo"), "bar")
   leveldb_close(db2)
   unlink(path, recursive = TRUE)
+})
+
+test_that("raw detection -- serialized objects", {
+  path <- tempfile()
+  db <- leveldb_connect(path, create_if_missing = TRUE)
+
+  x <- runif(10)
+  sx <- serialize(x, NULL)
+  y <- runif(10)
+  sy <- serialize(y, NULL, xdr = FALSE)
+
+  expect_null(leveldb_put(db, sx, sy))
+  expect_true(leveldb_exists(db, sx))
+  expect_false(leveldb_exists(db, sy))
+
+  expect_identical(leveldb_get(db, sx), sy)
+})
+
+test_that("raw detection -- embedded nul", {
+  path <- tempfile()
+  db <- leveldb_connect(path, create_if_missing = TRUE)
+
+  ## NOTE: this guarantees an _embedded_ nul and x != y
+  x <- as.raw(c(1L, sample(0:255), 2L))
+  y <- as.raw(c(3L, sample(0:255), 4L))
+
+  expect_null(leveldb_put(db, x, y))
+  expect_true(leveldb_exists(db, x))
+  expect_false(leveldb_exists(db, y))
+
+  ## I think that a better way here will be as_raw = TRUE, FALSE, NULL
+  expect_identical(leveldb_get(db, x, as_raw = TRUE), y)
+  expect_identical(leveldb_get(db, x, as_raw = NULL), y)
+  expect_error(leveldb_get(db, x, as_raw = FALSE),
+               "Value contains embedded nul bytes; cannot return string")
+
+  expect_identical(leveldb_get(db, x), y)
 })

@@ -31,9 +31,9 @@ leveldb_property <- function(db, name, error_if_missing = FALSE) {
   .Call(Crleveldb_property, db, name, error_if_missing)
 }
 
-leveldb_get <- function(db, key, force_raw = FALSE, error_if_missing = FALSE,
+leveldb_get <- function(db, key, as_raw = NULL, error_if_missing = FALSE,
                         readoptions = NULL) {
-  .Call(Crleveldb_get, db, key, force_raw, error_if_missing, readoptions)
+  .Call(Crleveldb_get, db, key, as_raw, error_if_missing, readoptions)
 }
 
 leveldb_put <- function(db, key, value, writeoptions = NULL) {
@@ -76,13 +76,13 @@ leveldb_iter_prev <- function(it, error_if_invalid = FALSE) {
   .Call(Crleveldb_iter_prev, it, error_if_invalid)
 }
 
-leveldb_iter_key <- function(it, force_raw = FALSE, error_if_invalid = FALSE) {
-  .Call(Crleveldb_iter_key, it, force_raw, error_if_invalid)
+leveldb_iter_key <- function(it, as_raw = NULL, error_if_invalid = FALSE) {
+  .Call(Crleveldb_iter_key, it, as_raw, error_if_invalid)
 }
 
-leveldb_iter_value <- function(it, force_raw = FALSE,
+leveldb_iter_value <- function(it, as_raw = NULL,
                                error_if_invalid = FALSE) {
-  .Call(Crleveldb_iter_value, it, force_raw, error_if_invalid)
+  .Call(Crleveldb_iter_value, it, as_raw, error_if_invalid)
 }
 
 leveldb_snapshot <- function(db) {

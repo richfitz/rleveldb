@@ -33,9 +33,9 @@ R6_leveldb <- R6::R6Class(
     property = function(name, error_if_missing = FALSE) {
       leveldb_property(self$db, name, error_if_missing)
     },
-    get = function(key, force_raw = FALSE, error_if_missing = FALSE,
+    get = function(key, as_raw = NULL, error_if_missing = FALSE,
                    readoptions = NULL) {
-      leveldb_get(self$db, key, force_raw, error_if_missing, readoptions)
+      leveldb_get(self$db, key, as_raw, error_if_missing, readoptions)
     },
     put = function(key, value, writeoptions = NULL) {
       leveldb_put(self$db, key, value, writeoptions)
@@ -102,11 +102,11 @@ R6_leveldb_iterator <- R6::R6Class(
       leveldb_iter_prev(self$it, error_if_invalid)
       invisible(self)
     },
-    key = function(force_raw = FALSE, error_if_invalid = FALSE) {
-      leveldb_iter_key(self$it, force_raw, error_if_invalid)
+    key = function(as_raw = NULL, error_if_invalid = FALSE) {
+      leveldb_iter_key(self$it, as_raw, error_if_invalid)
     },
-    value = function(force_raw = FALSE, error_if_invalid = FALSE) {
-      leveldb_iter_value(self$it, force_raw, error_if_invalid)
+    value = function(as_raw = NULL, error_if_invalid = FALSE) {
+      leveldb_iter_value(self$it, as_raw, error_if_invalid)
     }
   ))
 
