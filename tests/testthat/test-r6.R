@@ -63,6 +63,15 @@ test_that("put, with writeoptions", {
   expect_equal(db$get("foo"), "bar")
 })
 
+test_that("get, with readoptions", {
+  db <- leveldb(tempfile(), create_if_missing = TRUE)
+  on.exit(db$destroy())
+  options <- leveldb_readoptions(verify_checksums = TRUE)
+  expect_null(db$put("foo", "bar"))
+  ## We won't know that this definitely worked, unfortunately...
+  expect_equal(db$get("foo", readoptions = options), "bar")
+})
+
 test_that("delete", {
   db <- leveldb(tempfile(), create_if_missing = TRUE)
   on.exit(db$destroy())
