@@ -106,7 +106,7 @@ SEXP rleveldb_connect(SEXP r_name,
 
   char *err = NULL;
   leveldb_t *db = leveldb_open(options, name, &err);
-  leveldb_free(options);
+  leveldb_options_destroy(options);
   rleveldb_handle_error(err);
 
   SEXP tag = PROTECT(allocVector(VECSXP, TAG_LENGTH));
@@ -164,7 +164,7 @@ SEXP rleveldb_destroy(SEXP r_name) {
   leveldb_options_t *options = leveldb_options_create();
   char *err = NULL;
   leveldb_destroy_db(options, name, &err);
-  leveldb_free(options);
+  leveldb_options_destroy(options);
   rleveldb_handle_error(err);
   return ScalarLogical(true);
 }
@@ -174,7 +174,7 @@ SEXP rleveldb_repair(SEXP r_name) {
   leveldb_options_t *options = leveldb_options_create();
   char *err = NULL;
   leveldb_repair_db(options, name, &err);
-  leveldb_free(options);
+  leveldb_options_destroy(options);
   rleveldb_handle_error(err);
   return ScalarLogical(true);
 }
