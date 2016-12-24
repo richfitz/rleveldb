@@ -196,3 +196,32 @@ test_that("error_if_exists", {
   expect_error(leveldb_connect(path, error_if_exists = TRUE),
                "exists (error_if_exists is true)", fixed = TRUE)
 })
+
+test_that("enable cache", {
+  ## skip("not working")
+  path <- tempfile()
+  db <- leveldb_connect(path,
+                        create_if_missing = TRUE,
+                        cache_capacity = 1000000)
+  expect_is(.Call("rleveldb_tag", db)[[2]], "externalptr")
+
+  leveldb_put(db, "foo", "bar")
+  expect_equal(leveldb_get(db, "foo"), "bar")
+  leveldb_close(db)
+  rm(db)
+  gc()
+})
+
+test_that("enable filter", {
+  path <- tempfile()
+  db <- leveldb_connect(path,
+                        create_if_missing = TRUE,
+                        bloom_filter_bits_per_key = 10)
+  expect_is(.Call("rleveldb_tag", db)[[3]], "externalptr")
+
+  leveldb_put(db, "foo", "bar")
+  expect_equal(leveldb_get(db, "foo"), "bar")
+  leveldb_close(db)
+  rm(db)
+  gc()
+})

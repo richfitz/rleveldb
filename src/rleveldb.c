@@ -72,23 +72,23 @@ SEXP rleveldb_connect(SEXP r_name,
   //
   // There is some gymnastics here to avoid leaking in the case of an
   // R error (perhaps thrown by the coersion functions).
-  SEXP r_cache = R_NilValue, r_filterpolicy = R_NilValue;
+  SEXP r_cache_ptr = R_NilValue, r_filterpolicy_ptr = R_NilValue;
   leveldb_cache_t* cache = NULL;
   leveldb_filterpolicy_t* filterpolicy = NULL;
   bool
-    has_cache = r_cache != R_NilValue,
+    has_cache = r_cache_capacity != R_NilValue,
     has_filterpolicy = r_bloom_filter_bits_per_key != R_NilValue;
   if (has_cache) {
     cache = leveldb_cache_create_lru(scalar_size(r_cache_capacity));
-    r_cache = PROTECT(R_MakeExternalPtr(cache, R_NilValue, R_NilValue));
-    R_RegisterCFinalizer(r_cache, rleveldb_cache_finalize);
+    r_cache_ptr = PROTECT(R_MakeExternalPtr(cache, R_NilValue, R_NilValue));
+    R_RegisterCFinalizer(r_cache_ptr, rleveldb_cache_finalize);
   }
   if (has_filterpolicy) {
     size_t bits_per_key = scalar_size(r_bloom_filter_bits_per_key);
     filterpolicy = leveldb_filterpolicy_create_bloom(bits_per_key);
-    r_filterpolicy =
+    r_filterpolicy_ptr =
       PROTECT(R_MakeExternalPtr(filterpolicy, R_NilValue, R_NilValue));
-    R_RegisterCFinalizer(r_filterpolicy, rleveldb_filterpolicy_finalize);
+    R_RegisterCFinalizer(r_filterpolicy_ptr, rleveldb_filterpolicy_finalize);
   }
   const char *name = scalar_character(r_name);
   leveldb_options_t *options =
@@ -110,8 +110,8 @@ SEXP rleveldb_connect(SEXP r_name,
 
   SEXP tag = PROTECT(allocVector(VECSXP, TAG_LENGTH));
   SET_VECTOR_ELT(tag, TAG_NAME, r_name);
-  SET_VECTOR_ELT(tag, TAG_CACHE, r_cache);
-  SET_VECTOR_ELT(tag, TAG_FILTERPOLICY, r_filterpolicy);
+  SET_VECTOR_ELT(tag, TAG_CACHE, r_cache_ptr);
+  SET_VECTOR_ELT(tag, TAG_FILTERPOLICY, r_filterpolicy_ptr);
   SET_VECTOR_ELT(tag, TAG_ITERATORS, R_NilValue); // will be a pairlist
 
   SEXP r_db = PROTECT(R_MakeExternalPtr(db, tag, R_NilValue));
@@ -120,31 +120,16 @@ SEXP rleveldb_connect(SEXP r_name,
   return r_db;
 }
 
+// TODO: this needs to happen during finalize too!
 SEXP rleveldb_close(SEXP r_db, SEXP r_error_if_closed) {
   leveldb_t *db = rleveldb_get_db(r_db, scalar_logical(r_error_if_closed));
   if (db != NULL) {
     SEXP tag = R_ExternalPtrTag(r_db);
-    SEXP r_cache = VECTOR_ELT(tag, TAG_CACHE);
-    if (r_cache != R_NilValue) {
-      leveldb_cache_t* cache = (leveldb_cache_t*)R_ExternalPtrAddr(r_cache);
-      if (cache) {
-        leveldb_cache_destroy(cache);
-      }
-    }
-    SEXP r_filterpolicy = VECTOR_ELT(tag, TAG_FILTERPOLICY);
-    if (r_filterpolicy != R_NilValue) {
-      leveldb_filterpolicy_t* filterpolicy =
-        (leveldb_filterpolicy_t*)R_ExternalPtrAddr(r_filterpolicy);
-      if (filterpolicy) {
-        leveldb_filterpolicy_destroy(filterpolicy);
-      }
-    }
     SEXP r_iterators = VECTOR_ELT(tag, TAG_ITERATORS);
     while (r_iterators != R_NilValue) {
       rleveldb_iter_destroy(CAR(r_iterators), ScalarLogical(false));
       r_iterators = CDR(r_iterators);
     }
-
     leveldb_close(db);
     R_ClearExternalPtr(r_db);
   }
@@ -804,3 +789,7 @@ bool check_iterator(leveldb_iterator_t *it, SEXP r_error_if_invalid) {
 
 leveldb_readoptions_t * default_readoptions = NULL;
 leveldb_writeoptions_t * default_writeoptions = NULL;
+
+SEXP rleveldb_tag(SEXP r_db) {
+  return R_ExternalPtrTag(r_db);
+}
