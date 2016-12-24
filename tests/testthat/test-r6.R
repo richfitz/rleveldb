@@ -115,6 +115,11 @@ test_that("approximate_sizes", {
   expect_equal(db$approximate_sizes("a", "f"), 0)
   expect_equal(db$approximate_sizes(c("a", "f"), c("f", "z")),
                c(0, 0))
+  expect_equal(db$approximate_sizes(as.raw(0), as.raw(255)), 0)
+  expect_equal(db$approximate_sizes(raw(0), "z"), 0)
+  expect_equal(db$approximate_sizes(list(raw(0)), list("z")), 0)
+  expect_equal(db$approximate_sizes(list(raw(0), "f"), list("f", raw(255))),
+               c(0, 0))
 
   ## TODO: this is possibly not actually working when there are any
   ## keys in the database!  I'm doing something wrong e.g., in the

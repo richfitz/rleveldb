@@ -41,8 +41,9 @@ test_that("approximate_sizes error handling", {
                "Expected 'limit_key' to be a length 1 vector")
   expect_error(leveldb_approximate_sizes(db, "a", letters),
                "Expected 'limit_key' to be a length 1 vector")
+  expect_error(leveldb_approximate_sizes(db, "a", 1),
+               "Invalid type; expected a character or raw vector")
 })
-
 test_that("database handle handles safely", {
   expect_error(leveldb_get(NULL, "foo"), "Expected an external pointer")
   expect_error(leveldb_get(null_pointer(), "foo"),
@@ -111,4 +112,15 @@ test_that("scalar_size", {
                "Expected a scalar size")
   expect_error(leveldb_connect(path, max_open_files = c(10, 20)),
                "Expected a scalar size")
+})
+
+test_that("get_keys_data", {
+  path <- tempfile()
+  db <- leveldb_connect(path, create_if_missing = TRUE)
+  leveldb_approximate_sizes(db, raw(0), raw(255))
+
+  expect_error(leveldb_approximate_sizes(db, "a", character(0)),
+               "Expected 'limit_key' to be a length 1 vector")
+  expect_error(leveldb_approximate_sizes(db, "a", letters),
+               "Expected 'limit_key' to be a length 1 vector")
 })
