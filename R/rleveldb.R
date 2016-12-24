@@ -124,16 +124,20 @@ leveldb_compact_range <- function(db, start, limit) {
   .Call(Crleveldb_compact_range, db, start, limit)
 }
 
-leveldb_readoptions <- function(verify_checksums = FALSE, fill_cache = NULL,
+leveldb_readoptions <- function(verify_checksums = NULL, fill_cache = NULL,
                                 snapshot = NULL) {
   ptr <- .Call(Crleveldb_readoptions, verify_checksums, fill_cache, snapshot)
-  class(ptr) <- "leveldb_readoptions"
+  attr(ptr, "options") <- list(verify_checksums = verify_checksums,
+                               fill_cache = fill_cache,
+                               snapshot = snapshot)
+  class(ptr) <- c("leveldb_readoptions", "leveldb_options")
   ptr
 }
 
 leveldb_writeoptions <- function(sync = NULL) {
   ptr <- .Call(Crleveldb_writeoptions, sync)
-  class(ptr) <- "leveldb_writeoptions"
+  class(ptr) <- c("leveldb_writeoptions", "leveldb_options")
+  attr(ptr, "options") <- list(sync = sync)
   ptr
 }
 
@@ -153,4 +157,61 @@ leveldb_version <- function() {
   ret <- list(.Call(Crleveldb_version))
   class(ret) <- "numeric_version"
   ret
+}
+
+##' @export
+as.character.leveldb_snapshot <- function(x, ...) {
+  sprintf("<leveldb_snapshot> @ %s", attr(x, "timestamp"))
+}
+
+##" @export
+print.leveldb_snapshot <- function(x, ...) {
+  cat(as.character(x), "\n")
+  invisible(x)
+}
+
+##' @export
+names.leveldb_options <- function(x, ...) {
+  names(attr(x, "options", exact = TRUE))
+}
+
+##' @export
+`$.leveldb_options` <- function(x, i) {
+  attr(x, "options")[[i]]
+}
+
+##' @export
+`[[.leveldb_options` <- function(x, i, ...) {
+  attr(x, "options")[[i]]
+}
+
+##' @export
+`$<-.leveldb_options` <- function(x, i, value) {
+  stop(sprintf("%s objects are immutable", class(x)[[1L]]))
+}
+
+##' @export
+`[[<-.leveldb_options` <- function(x, i, value, ...) {
+  stop(sprintf("%s objects are immutable", class(x)[[1L]]))
+}
+
+##' @export
+as.character.leveldb_options <- function(x, ...) {
+  f <- function(x) {
+    if (is.null(x)) {
+      "<not set>"
+    } else {
+      as.character(x)
+    }
+  }
+  value <- vapply(names(x), function(i) f(x[[i]]), character(1))
+  txt <- c(sprintf("<%s>", class(x)[[1]]),
+           sprintf("  - %s: %s", names(x), value))
+  paste(txt, collapse = "\n")
+}
+
+##' @export
+print.leveldb_options <- function(x, ...) {
+  cat(as.character(x), "\n")
+  invisible(x)
 }
