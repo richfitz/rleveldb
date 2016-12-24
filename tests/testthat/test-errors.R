@@ -94,3 +94,21 @@ test_that("writeoptions handle handles safely", {
   expect_error(leveldb_delete(db, "a", writeoptions = null_pointer()),
                "leveldb writeoptions is not open")
 })
+
+test_that("scalar_size", {
+  path <- tempfile()
+  expect_error(leveldb_connect(path, max_open_files = -1),
+               "Expected a positive size")
+  ## special values:
+  expect_error(leveldb_connect(path, max_open_files = NA_real_),
+               "Expected a non-missing")
+  expect_error(leveldb_connect(path, max_open_files = Inf),
+               "Expected a non-missing")
+  expect_error(leveldb_connect(path, max_open_files = NA_integer_),
+               "Expected a non-missing")
+  ## other
+  expect_error(leveldb_connect(path, max_open_files = "a"),
+               "Expected a scalar size")
+  expect_error(leveldb_connect(path, max_open_files = c(10, 20)),
+               "Expected a scalar size")
+})

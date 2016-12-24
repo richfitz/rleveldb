@@ -167,3 +167,32 @@ test_that("raw detection -- embedded nul", {
 
   expect_identical(leveldb_get(db, x), y)
 })
+
+test_that("simple options", {
+  path <- tempfile()
+  db <- leveldb_connect(path,
+                        create_if_missing = TRUE,
+                        error_if_exists = TRUE,
+                        paranoid_checks = TRUE,
+                        write_buffer_size = 100,
+                        max_open_files = 5000,
+                        block_size = 8192L,
+                        use_compression = FALSE)
+
+  expect_output(print(db), paste0("name: ", path))
+  expect_output(print(db), "create_if_missing: TRUE")
+  expect_output(print(db), "error_if_exists: TRUE")
+  expect_output(print(db), "paranoid_checks: TRUE")
+  expect_output(print(db), "write_buffer_size: 100")
+  expect_output(print(db), "max_open_files: 5000")
+  expect_output(print(db), "block_size: 8192")
+  expect_output(print(db), "use_compression: FALSE")
+})
+
+test_that("error_if_exists", {
+  path <- tempfile()
+  db <- leveldb_connect(path, create_if_missing = TRUE)
+  leveldb_close(db)
+  expect_error(leveldb_connect(path, error_if_exists = TRUE),
+               "exists (error_if_exists is true)", fixed = TRUE)
+})

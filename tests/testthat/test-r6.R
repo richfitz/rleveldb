@@ -5,7 +5,7 @@ test_that("creation", {
   on.exit(db$destroy())
   expect_is(db, "leveldb")
   expect_is(db, "R6")
-  expect_is(db$db, "externalptr")
+  expect_is(db$db, "leveldb_connection")
 })
 
 test_that("property", {

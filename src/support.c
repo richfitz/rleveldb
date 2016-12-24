@@ -127,12 +127,13 @@ size_t scalar_size(SEXP x) {
         Rf_error("Expected a non-missing (& finite) size");
       }
     } else if (TYPEOF(x) == REALSXP) {
-      value = (int) REAL(x)[0];
-      if (!R_FINITE(value)) {
+      double rvalue = REAL(x)[0];
+      if (!R_FINITE(rvalue)) {
         Rf_error("Expected a non-missing (& finite) size");
       }
+      value = (int) rvalue;
     } else {
-      Rf_error("Expected a logical scalar");
+      Rf_error("Expected a scalar size");
     }
     if (value < 0) {
       Rf_error("Expected a positive size");

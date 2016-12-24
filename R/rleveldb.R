@@ -9,10 +9,23 @@ leveldb_connect <- function(name,
                             use_compression = NULL,
                             cache_capacity = NULL,
                             bloom_filter_bits_per_key = NULL) {
-  .Call(Crleveldb_connect, name, create_if_missing, error_if_exists,
-        paranoid_checks, write_buffer_size, max_open_files,
-        block_size, use_compression,
-        cache_capacity, bloom_filter_bits_per_key)
+  ptr <- .Call(Crleveldb_connect, name, create_if_missing, error_if_exists,
+               paranoid_checks, write_buffer_size, max_open_files,
+               block_size, use_compression,
+               cache_capacity, bloom_filter_bits_per_key)
+  attr(ptr, "options") <- list(name = name,
+                               create_if_missing = create_if_missing,
+                               error_if_exists = error_if_exists,
+                               paranoid_checks = paranoid_checks,
+                               write_buffer_size = write_buffer_size,
+                               max_open_files = max_open_files,
+                               block_size = block_size,
+                               use_compression = use_compression,
+                               cache_capacity = cache_capacity,
+                               bloom_filter_bits_per_key =
+                                 bloom_filter_bits_per_key)
+  class(ptr) <- c("leveldb_connection", "leveldb_options")
+  ptr
 }
 
 leveldb_close <- function(db, error_if_closed = FALSE) {
