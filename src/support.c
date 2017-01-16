@@ -20,6 +20,15 @@ size_t get_keys(SEXP keys, const char ***key_data, size_t **key_len) {
   return len;
 }
 
+size_t get_starts_with(SEXP starts_with, const char **starts_with_data) {
+  if (starts_with == R_NilValue) {
+    *starts_with_data = NULL;
+    return 0;
+  } else {
+    return get_data(starts_with, starts_with_data, "starts_with");
+  }
+}
+
 size_t get_data(SEXP data, const char **data_contents, const char* name) {
   switch (TYPEOF(data)) {
   case STRSXP:

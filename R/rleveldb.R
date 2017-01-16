@@ -154,12 +154,13 @@ leveldb_writeoptions <- function(sync = NULL) {
   ptr
 }
 
-leveldb_keys_len <- function(db, readoptions = NULL) {
-  .Call(Crleveldb_keys_len, db, readoptions)
+leveldb_keys_len <- function(db, starts_with = NULL, readoptions = NULL) {
+  .Call(Crleveldb_keys_len, db, starts_with, readoptions)
 }
 
-leveldb_keys <- function(db, as_raw = FALSE, readoptions = NULL) {
-  .Call(Crleveldb_keys, db, as_raw, readoptions)
+leveldb_keys <- function(db, starts_with = NULL, as_raw = FALSE,
+                         readoptions = NULL) {
+  .Call(Crleveldb_keys, db, starts_with, as_raw, readoptions)
 }
 
 leveldb_exists <- function(db, key, readoptions = NULL) {

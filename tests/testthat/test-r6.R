@@ -39,7 +39,7 @@ test_that("put, get (raw key)", {
   expect_equal(db$get(k), "bar")
   ## So, this is not ideal:
   expect_error(db$keys(), "embedded nul in string")
-  expect_equal(db$keys(TRUE), list(k))
+  expect_equal(db$keys(as_raw = TRUE), list(k))
 })
 
 test_that("put, get (raw value)", {
@@ -89,7 +89,7 @@ test_that("keys, keys_len", {
 
   expect_equal(db$keys_len(), 0L)
   expect_equal(db$keys(), character(0))
-  expect_equal(db$keys(TRUE), list())
+  expect_equal(db$keys(as_raw = TRUE), list())
 
   k <- unique(replicate(50, rand_str(rpois(1, 5))))
   v <- replicate(length(k), rand_str(rpois(1, 5)))
@@ -103,7 +103,7 @@ test_that("keys, keys_len", {
   ## straightforward to compute in R space.
   expect_equal(sort(db$keys()), sort(k))
 
-  dat <- db$keys(TRUE)
+  dat <- db$keys(as_raw = TRUE)
   expect_is(dat, "list")
   expect_true(all(vapply(dat, is.raw, logical(1))))
   expect_equal(vapply(dat, rawToChar, character(1)), db$keys())

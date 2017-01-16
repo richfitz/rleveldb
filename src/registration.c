@@ -39,12 +39,12 @@ static const R_CallMethodDef call_methods[] = {
   {"Crleveldb_readoptions",        (DL_FUNC) &rleveldb_readoptions,        3},
   {"Crleveldb_writeoptions",       (DL_FUNC) &rleveldb_writeoptions,       1},
 
-  {"Crleveldb_keys_len", (DL_FUNC) &rleveldb_keys_len, 2},
-  {"Crleveldb_keys",     (DL_FUNC) &rleveldb_keys,     3},
-  {"Crleveldb_exists",   (DL_FUNC) &rleveldb_exists,   3},
-  {"Crleveldb_version",  (DL_FUNC) &rleveldb_version,  0},
+  {"Crleveldb_keys_len",           (DL_FUNC) &rleveldb_keys_len,           3},
+  {"Crleveldb_keys",               (DL_FUNC) &rleveldb_keys,               4},
+  {"Crleveldb_exists",             (DL_FUNC) &rleveldb_exists,             3},
+  {"Crleveldb_version",            (DL_FUNC) &rleveldb_version,            0},
 
-  {NULL,                 NULL,                         0}
+  {NULL,                           NULL,                                   0}
 };
 
 extern leveldb_readoptions_t * default_readoptions;

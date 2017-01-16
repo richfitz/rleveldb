@@ -46,11 +46,11 @@ R6_leveldb <- R6::R6Class(
     exists = function(key, readoptions = NULL) {
       leveldb_exists(self$db, key, readoptions)
     },
-    keys = function(as_raw = FALSE, readoptions = NULL) {
-      leveldb_keys(self$db, as_raw, readoptions)
+    keys = function(starts_with = NULL, as_raw = FALSE, readoptions = NULL) {
+      leveldb_keys(self$db, starts_with, as_raw, readoptions)
     },
-    keys_len = function(readoptions = NULL) {
-      leveldb_keys_len(self$db, readoptions)
+    keys_len = function(starts_with = NULL, readoptions = NULL) {
+      leveldb_keys_len(self$db, starts_with, readoptions)
     },
     iterator = function(readoptions = NULL) {
       R6_leveldb_iterator$new(self$db, readoptions)

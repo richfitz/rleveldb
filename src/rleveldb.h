@@ -48,7 +48,8 @@ SEXP rleveldb_readoptions(SEXP r_verify_checksums, SEXP r_fill_cache,
                           SEXP r_snapshot);
 SEXP rleveldb_writeoptions(SEXP r_sync);
 
-SEXP rleveldb_keys(SEXP r_db, SEXP r_as_raw, SEXP r_readoptions);
-SEXP rleveldb_keys_len(SEXP r_db, SEXP r_readoptions);
+SEXP rleveldb_keys(SEXP r_db, SEXP r_starts_with, SEXP r_as_raw,
+                   SEXP r_readoptions);
+SEXP rleveldb_keys_len(SEXP r_db, SEXP r_starts_with, SEXP r_readoptions);
 SEXP rleveldb_exists(SEXP r_db, SEXP r_key, SEXP r_readoptions);
 SEXP rleveldb_version();

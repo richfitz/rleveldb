@@ -39,8 +39,13 @@ leveldb_options_t* rleveldb_collect_options(SEXP r_create_if_missing,
                                             SEXP r_max_open_files,
                                             SEXP r_block_size,
                                             SEXP r_use_compression);
+bool iter_key_starts_with(leveldb_iterator_t *it, const char *starts_with,
+                          size_t starts_with_len);
+
 // Slightly different
-size_t rleveldb_get_keys_len(leveldb_t *db, leveldb_readoptions_t *readoptions);
+size_t rleveldb_get_keys_len(leveldb_t *db,
+                             const char *starts_with, size_t starts_with_len,
+                             leveldb_readoptions_t *readoptions);
 bool rleveldb_get_exists(leveldb_t *db, const char *key_data, size_t key_len,
                          leveldb_readoptions_t *readoptions);
 
@@ -484,24 +489,35 @@ SEXP rleveldb_writeoptions(SEXP r_sync) {
 // This is going to be needed for a "match pattern" find function,
 // though the bigger hurdle is going to be doing any sort of actual
 // pattern matching aside from "starts with"
-SEXP rleveldb_keys(SEXP r_db, SEXP r_as_raw, SEXP r_readoptions) {
+//
+// In any case this would be nice to rework to use pairlists as I
+// think that would be a nice solution and not too hard to implement.
+SEXP rleveldb_keys(SEXP r_db, SEXP r_starts_with, SEXP r_as_raw,
+                   SEXP r_readoptions) {
   leveldb_t *db = rleveldb_get_db(r_db, true);
   return_as as_raw = to_return_as(r_as_raw);
   leveldb_readoptions_t *readoptions =
     rleveldb_get_readoptions(r_readoptions, true);
-  size_t n = rleveldb_get_keys_len(db, readoptions);
   bool as_string = as_raw == AS_STRING;
+  const char *starts_with = NULL;
+  const size_t starts_with_len = get_starts_with(r_starts_with, &starts_with);
+
+  size_t n = rleveldb_get_keys_len(db, starts_with, starts_with_len,
+                                   readoptions);
   SEXP ret = PROTECT(allocVector(as_string ? STRSXP : VECSXP, n));
 
   leveldb_iterator_t *it = leveldb_create_iterator(db, readoptions);
   leveldb_iter_seek_to_first(it);
   size_t key_len;
-  for (size_t i = 0; i < n; ++i, leveldb_iter_next(it)) {
-    const char *key_data = leveldb_iter_key(it, &key_len);
-    if (as_string) {
-      SET_STRING_ELT(ret, i, mkCharLen(key_data, key_len));
-    } else {
-      SET_VECTOR_ELT(ret, i, raw_string_to_sexp(key_data, key_len, as_raw));
+  for (size_t i = 0; i < n; leveldb_iter_next(it)) {
+    if (iter_key_starts_with(it, starts_with, starts_with_len)) {
+      const char *key_data = leveldb_iter_key(it, &key_len);
+      if (as_string) {
+        SET_STRING_ELT(ret, i, mkCharLen(key_data, key_len));
+      } else {
+        SET_VECTOR_ELT(ret, i, raw_string_to_sexp(key_data, key_len, as_raw));
+      }
+      ++i;
     }
   }
   leveldb_iter_destroy(it);
@@ -510,11 +526,14 @@ SEXP rleveldb_keys(SEXP r_db, SEXP r_as_raw, SEXP r_readoptions) {
   return ret;
 }
 
-SEXP rleveldb_keys_len(SEXP r_db, SEXP r_readoptions) {
+SEXP rleveldb_keys_len(SEXP r_db, SEXP r_starts_with, SEXP r_readoptions) {
   leveldb_t *db = rleveldb_get_db(r_db, true);
   leveldb_readoptions_t *readoptions =
     rleveldb_get_readoptions(r_readoptions, true);
-  return ScalarInteger(rleveldb_get_keys_len(db, readoptions));
+  const char *starts_with = NULL;
+  const size_t starts_with_len = get_starts_with(r_starts_with, &starts_with);
+  return ScalarInteger(rleveldb_get_keys_len(db, starts_with,
+                                             starts_with_len, readoptions));
 }
 
 SEXP rleveldb_exists(SEXP r_db, SEXP r_key, SEXP r_readoptions) {
@@ -703,13 +722,16 @@ void rleveldb_handle_error(char* err) {
 }
 
 size_t rleveldb_get_keys_len(leveldb_t *db,
+                             const char *starts_with, size_t starts_with_len,
                              leveldb_readoptions_t *readoptions) {
   leveldb_iterator_t *it = leveldb_create_iterator(db, readoptions);
   size_t n = 0;
   for (leveldb_iter_seek_to_first(it);
        leveldb_iter_valid(it);
        leveldb_iter_next(it)) {
-    ++n;
+    if (iter_key_starts_with(it, starts_with, starts_with_len)) {
+      ++n;
+    }
   }
   leveldb_iter_destroy(it);
   return n;
@@ -792,4 +814,15 @@ leveldb_writeoptions_t * default_writeoptions = NULL;
 
 SEXP rleveldb_tag(SEXP r_db) {
   return R_ExternalPtrTag(r_db);
+}
+
+bool iter_key_starts_with(leveldb_iterator_t *it, const char *starts_with,
+                          size_t starts_with_len) {
+  if (starts_with_len == 0) {
+    return true;
+  }
+  size_t key_len;
+  const char *key_data = leveldb_iter_key(it, &key_len);
+  return key_len >= starts_with_len &&
+    memcmp(key_data, starts_with, starts_with_len) == 0;
 }

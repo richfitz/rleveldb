@@ -82,18 +82,44 @@ test_that("Get missing key", {
 test_that("keys", {
   db <- leveldb_connect(tempfile(), create_if_missing = TRUE)
   expect_identical(leveldb_keys_len(db), 0L)
-  expect_identical(leveldb_keys(db, TRUE), list())
-  expect_identical(leveldb_keys(db, NULL), list())
-  expect_identical(leveldb_keys(db, FALSE), character(0))
+  expect_identical(leveldb_keys(db, as_raw = TRUE), list())
+  expect_identical(leveldb_keys(db, as_raw = NULL), list())
+  expect_identical(leveldb_keys(db, as_raw = FALSE), character(0))
 
   leveldb_put(db, "foo", "bar")
   expect_identical(leveldb_keys_len(db), 1L)
-  expect_equal(leveldb_keys(db, TRUE), list(charToRaw("foo")))
-  expect_equal(leveldb_keys(db, NULL), list("foo"))
-  expect_equal(leveldb_keys(db, FALSE), "foo")
+  expect_equal(leveldb_keys(db, as_raw = TRUE), list(charToRaw("foo")))
+  expect_equal(leveldb_keys(db, as_raw = NULL), list("foo"))
+  expect_equal(leveldb_keys(db, as_raw = FALSE), "foo")
 
   expect_null(leveldb_delete(db, "foo"))
   expect_identical(leveldb_keys_len(db), 0L)
+})
+
+test_that("keys - starts_with", {
+  db <- leveldb_connect(tempfile(), create_if_missing = TRUE)
+  prefix <- rand_str()
+  expect_identical(leveldb_keys_len(db, prefix), 0L)
+
+  n <- 10L
+  keys <- sprintf("%s:%s", prefix, replicate(n, rand_str()))
+  dat <- rand_bytes(length(keys))
+
+  for (i in seq_along(keys)) {
+    leveldb_put(db, keys[[i]], dat[[i]])
+  }
+
+  expect_identical(leveldb_keys_len(db), n)
+  expect_identical(leveldb_keys_len(db, prefix), n)
+
+  ## add a key that does not fit the pattern:
+  leveldb_put(db, "foo", "bar")
+
+  expect_identical(leveldb_keys_len(db), n + 1L)
+  expect_identical(leveldb_keys_len(db, prefix), n)
+
+  expect_equal(sort(leveldb_keys(db)), sort(c(keys, "foo")))
+  expect_equal(sort(leveldb_keys(db, prefix)), sort(keys))
 })
 
 test_that("exists", {
