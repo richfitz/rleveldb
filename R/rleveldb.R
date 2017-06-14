@@ -127,6 +127,10 @@ leveldb_put <- function(db, key, value, writeoptions = NULL) {
   .Call(Crleveldb_put, db, key, value, writeoptions)
 }
 
+leveldb_mput <- function(db, key, value, writeoptions = NULL) {
+  .Call(Crleveldb_mput, db, key, value, writeoptions)
+}
+
 leveldb_delete <- function(db, key, report = FALSE,
                            readoptions = NULL, writeoptions = NULL) {
   .Call(Crleveldb_delete, db, key, report, readoptions, writeoptions)
@@ -194,6 +198,10 @@ leveldb_writebatch_clear <- function(writebatch) {
 
 leveldb_writebatch_put <- function(writebatch, key, value) {
   .Call(Crleveldb_writebatch_put, writebatch, key, value)
+}
+
+leveldb_writebatch_mput <- function(writebatch, key, value) {
+  .Call(Crleveldb_writebatch_mput, writebatch, key, value)
 }
 
 leveldb_writebatch_delete <- function(writebatch, key) {

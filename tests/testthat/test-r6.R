@@ -146,3 +146,19 @@ test_that("mget", {
   expect_equal(db$mget(character(0)), list())
   expect_equal(db$mget(c("a", "a")), list("a", "a"))
 })
+
+test_that("mset", {
+  db <- leveldb(tempfile(), create_if_missing = TRUE)
+  db$mput(character(0), list())
+  expect_equal(db$keys_len(), 0)
+
+  db$mput("a", list("A"))
+  expect_equal(db$keys_len(), 1)
+  expect_true(db$exists("a"))
+  expect_equal(db$get("a"), "A")
+
+  db$mput(c("a", "b"), list("a", "b"))
+  expect_equal(db$keys_len(), 2)
+  expect_true(db$exists("b"))
+  expect_equal(db$mget(c("a", "b")), list("a", "b"))
+})

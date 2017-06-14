@@ -46,6 +46,10 @@ R6_leveldb <- R6::R6Class(
     put = function(key, value, writeoptions = NULL) {
       leveldb_put(self$db, key, value, writeoptions)
     },
+    mput = function(key, value, writeoptions = NULL) {
+      leveldb_mput(self$db, key, value, writeoptions)
+    },
+
     delete = function(key, report = FALSE,
                       readoptions = NULL, writeoptions = NULL) {
       leveldb_delete(self$db, key, report, readoptions, writeoptions)
@@ -136,6 +140,10 @@ R6_leveldb_writebatch <- R6::R6Class(
     },
     put = function(key, value) {
       leveldb_writebatch_put(self$ptr, key, value)
+      invisible(self)
+    },
+    mput = function(key, value) {
+      leveldb_writebatch_mput(self$ptr, key, value)
       invisible(self)
     },
     delete = function(key) {

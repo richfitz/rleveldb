@@ -12,6 +12,7 @@ static const R_CallMethodDef call_methods[] = {
   {"Crleveldb_get",                (DL_FUNC) &rleveldb_get,                5},
   {"Crleveldb_mget",               (DL_FUNC) &rleveldb_mget,               5},
   {"Crleveldb_put",                (DL_FUNC) &rleveldb_put,                4},
+  {"Crleveldb_mput",               (DL_FUNC) &rleveldb_mput,               4},
   {"Crleveldb_delete",             (DL_FUNC) &rleveldb_delete,             5},
 
   {"Crleveldb_iter_create",        (DL_FUNC) &rleveldb_iter_create,        2},
@@ -31,6 +32,7 @@ static const R_CallMethodDef call_methods[] = {
   {"Crleveldb_writebatch_destroy", (DL_FUNC) &rleveldb_writebatch_destroy, 2},
   {"Crleveldb_writebatch_clear",   (DL_FUNC) &rleveldb_writebatch_clear,   1},
   {"Crleveldb_writebatch_put",     (DL_FUNC) &rleveldb_writebatch_put,     3},
+  {"Crleveldb_writebatch_mput",    (DL_FUNC) &rleveldb_writebatch_mput,    3},
   {"Crleveldb_writebatch_delete",  (DL_FUNC) &rleveldb_writebatch_delete,  2},
   {"Crleveldb_write",              (DL_FUNC) &rleveldb_write,              3},
 

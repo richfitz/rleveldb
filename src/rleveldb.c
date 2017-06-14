@@ -264,17 +264,31 @@ SEXP rleveldb_mget(SEXP r_db, SEXP r_key, SEXP r_as_raw,
 
 SEXP rleveldb_put(SEXP r_db, SEXP r_key, SEXP r_value, SEXP r_writeoptions) {
   leveldb_t *db = rleveldb_get_db(r_db, true);
+  leveldb_writeoptions_t *writeoptions =
+    rleveldb_get_writeoptions(r_writeoptions, true);
   const char *key_data = NULL, *value_data = NULL;
   size_t
     key_len = get_key(r_key, &key_data),
     value_len = get_value(r_value, &value_data);
-  leveldb_writeoptions_t *writeoptions =
-    rleveldb_get_writeoptions(r_writeoptions, true);
 
   char *err = NULL;
   leveldb_put(db, writeoptions, key_data, key_len, value_data, value_len, &err);
   rleveldb_handle_error(err);
 
+  return R_NilValue;
+}
+
+// This is a slightly odd construction and could be done entirely in R
+// space (indeed, perhaps it should be?).  But using the higher level
+// R API here means that we can avoid leaks of the writebatch object
+// if any of the keys can't be extracted.  The total cost of doing
+// this is at most a couple of allocations and it avoids a lot of
+// duplicated code.
+SEXP rleveldb_mput(SEXP r_db, SEXP r_key, SEXP r_value, SEXP r_writeoptions) {
+  SEXP r_writebatch = PROTECT(rleveldb_writebatch_create());
+  rleveldb_writebatch_mput(r_writebatch, r_key, r_value);
+  rleveldb_write(r_db, r_writebatch, r_writeoptions);
+  UNPROTECT(1);
   return R_NilValue;
 }
 
@@ -322,6 +336,7 @@ SEXP rleveldb_delete_report(SEXP r_db, SEXP r_key, SEXP r_readoptions,
   int *found = INTEGER(r_found);
 
   leveldb_readoptions_t *readoptions = default_readoptions;
+  // TODO: leak danger on throw
   leveldb_writebatch_t *writebatch = leveldb_writebatch_create();
 
   // First, work out what exists:
@@ -477,8 +492,6 @@ SEXP rleveldb_writebatch_clear(SEXP r_writebatch) {
   return R_NilValue;
 }
 
-// TODO: get this working for vectorised key, value without multiple
-// calls to this function.
 SEXP rleveldb_writebatch_put(SEXP r_writebatch, SEXP r_key, SEXP r_value) {
   leveldb_writebatch_t *writebatch =
     rleveldb_get_writebatch(r_writebatch, true);
@@ -487,6 +500,29 @@ SEXP rleveldb_writebatch_put(SEXP r_writebatch, SEXP r_key, SEXP r_value) {
     key_len = get_key(r_key, &key_data),
     value_len = get_value(r_value, &value_data);
   leveldb_writebatch_put(writebatch, key_data, key_len, value_data, value_len);
+  return R_NilValue;
+}
+
+SEXP rleveldb_writebatch_mput(SEXP r_writebatch, SEXP r_key, SEXP r_value) {
+  leveldb_writebatch_t *writebatch =
+    rleveldb_get_writebatch(r_writebatch, true);
+  const char **key_data = NULL;
+  size_t *key_len = NULL;
+  size_t num_key = get_keys(r_key, &key_data, &key_len);
+
+  if (TYPEOF(r_value) != VECSXP) {
+    Rf_error("Expected a list for 'value'");
+  }
+  if ((size_t)length(r_value) != num_key) {
+    Rf_error("Expected %d values but recieved %d", num_key, length(r_value));
+  }
+  for (size_t i = 0; i < num_key; ++i) {
+    const char *value_data;
+    size_t value_len = get_value(VECTOR_ELT(r_value, i), &value_data);
+    leveldb_writebatch_put(writebatch, key_data[i], key_len[i],
+                           value_data, value_len);
+  }
+
   return R_NilValue;
 }
 
