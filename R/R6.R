@@ -1,5 +1,5 @@
-##' @importFrom R6 R6Class
-leveldb <- function(name, create_if_missing = NULL,
+leveldb <- function(path,
+                    create_if_missing = TRUE,
                     error_if_exists = NULL,
                     paranoid_checks = NULL,
                     write_buffer_size = NULL,
@@ -8,27 +8,28 @@ leveldb <- function(name, create_if_missing = NULL,
                     block_size = NULL,
                     use_compression = NULL,
                     bloom_filter_bits_per_key = NULL) {
-  R6_leveldb$new(name, create_if_missing, error_if_exists,
+  R6_leveldb$new(path, create_if_missing, error_if_exists,
                  paranoid_checks, write_buffer_size, max_open_files,
                  cache_capacity, block_size, use_compression,
                  bloom_filter_bits_per_key)
 }
 
+##' @importFrom R6 R6Class
 R6_leveldb <- R6::R6Class(
   "leveldb",
   public = list(
     db = NULL,
-    name = NULL,
-    initialize = function(name, ...) {
-      self$name <- name
-      self$db <- leveldb_connect(name, ...)
+    path = NULL,
+    initialize = function(path, ...) {
+      self$path <- path
+      self$db <- leveldb_connect(path, ...)
     },
     close = function(error_if_closed = FALSE) {
       leveldb_close(self$db, error_if_closed)
     },
     destroy = function() {
       self$close()
-      leveldb_destroy(self$name)
+      leveldb_destroy(self$path)
     },
     property = function(name, error_if_missing = FALSE) {
       leveldb_property(self$db, name, error_if_missing)
