@@ -11,8 +11,7 @@ static const R_CallMethodDef call_methods[] = {
 
   {"Crleveldb_get",                (DL_FUNC) &rleveldb_get,                5},
   {"Crleveldb_put",                (DL_FUNC) &rleveldb_put,                4},
-  {"Crleveldb_delete",             (DL_FUNC) &rleveldb_delete,             3},
-  {"Crleveldb_delete_and_report",  (DL_FUNC) &rleveldb_delete_and_report,  4},
+  {"Crleveldb_delete",             (DL_FUNC) &rleveldb_delete,             5},
 
   {"Crleveldb_iter_create",        (DL_FUNC) &rleveldb_iter_create,        2},
   {"Crleveldb_iter_destroy",       (DL_FUNC) &rleveldb_iter_destroy,       2},

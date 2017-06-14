@@ -41,8 +41,9 @@ R6_leveldb <- R6::R6Class(
     put = function(key, value, writeoptions = NULL) {
       leveldb_put(self$db, key, value, writeoptions)
     },
-    delete = function(key, writeoptions = NULL) {
-      leveldb_delete(self$db, key, writeoptions)
+    delete = function(key, report = FALSE,
+                      readoptions = NULL, writeoptions = NULL) {
+      leveldb_delete(self$db, key, report, readoptions, writeoptions)
     },
     exists = function(key, readoptions = NULL) {
       leveldb_exists(self$db, key, readoptions)

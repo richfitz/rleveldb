@@ -122,8 +122,9 @@ leveldb_put <- function(db, key, value, writeoptions = NULL) {
   .Call(Crleveldb_put, db, key, value, writeoptions)
 }
 
-leveldb_delete <- function(db, key, writeoptions = NULL) {
-  .Call(Crleveldb_delete, db, key, writeoptions)
+leveldb_delete <- function(db, key, report = FALSE,
+                           readoptions = NULL, writeoptions = NULL) {
+  .Call(Crleveldb_delete, db, key, report, readoptions, writeoptions)
 }
 
 leveldb_iter_create <- function(db, readoptions = NULL) {

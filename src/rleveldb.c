@@ -228,10 +228,19 @@ SEXP rleveldb_put(SEXP r_db, SEXP r_key, SEXP r_value, SEXP r_writeoptions) {
   return R_NilValue;
 }
 
+SEXP rleveldb_delete(SEXP r_db, SEXP r_key, SEXP r_report,
+                     SEXP r_readoptions, SEXP r_writeoptions) {
+  if (scalar_logical(r_report)) {
+    return rleveldb_delete_report(r_db, r_key, r_readoptions, r_writeoptions);
+  } else {
+    return rleveldb_delete_silent(r_db, r_key, r_writeoptions);
+  }
+}
+
 // This is the simple delete: it just deletes things and does not
 // report back anything about what was done (these keys may or may not
 // exist).
-SEXP rleveldb_delete(SEXP r_db, SEXP r_key, SEXP r_writeoptions) {
+SEXP rleveldb_delete_silent(SEXP r_db, SEXP r_key, SEXP r_writeoptions) {
   leveldb_t *db = rleveldb_get_db(r_db, true);
   const char *key_data = NULL;
   size_t key_len = get_key(r_key, &key_data);
@@ -248,8 +257,8 @@ SEXP rleveldb_delete(SEXP r_db, SEXP r_key, SEXP r_writeoptions) {
 // This is quite a bit more complicated; we first iterate through and
 // find out what exists, arranging to return that back to R in the
 // first place.  Then we go through and do the deletion.
-SEXP rleveldb_delete_and_report(SEXP r_db, SEXP r_key, SEXP r_readoptions,
-                                SEXP r_writeoptions) {
+SEXP rleveldb_delete_report(SEXP r_db, SEXP r_key, SEXP r_readoptions,
+                            SEXP r_writeoptions) {
   leveldb_t *db = rleveldb_get_db(r_db, true);
   const char **key_data = NULL;
   size_t *key_len = NULL;
