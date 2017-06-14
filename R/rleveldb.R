@@ -118,6 +118,11 @@ leveldb_get <- function(db, key, as_raw = NULL, error_if_missing = FALSE,
   .Call(Crleveldb_get, db, key, as_raw, error_if_missing, readoptions)
 }
 
+leveldb_mget <- function(db, key, as_raw = NULL, missing = NULL,
+                         readoptions = NULL) {
+  .Call(Crleveldb_mget, db, key, as_raw, missing, readoptions)
+}
+
 leveldb_put <- function(db, key, value, writeoptions = NULL) {
   .Call(Crleveldb_put, db, key, value, writeoptions)
 }

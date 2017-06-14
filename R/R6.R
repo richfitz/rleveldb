@@ -34,10 +34,15 @@ R6_leveldb <- R6::R6Class(
     property = function(name, error_if_missing = FALSE) {
       leveldb_property(self$db, name, error_if_missing)
     },
+
     get = function(key, as_raw = NULL, error_if_missing = FALSE,
                    readoptions = NULL) {
       leveldb_get(self$db, key, as_raw, error_if_missing, readoptions)
     },
+    mget = function(key, as_raw = NULL, missing = NULL, readoptions = NULL) {
+      leveldb_mget(self$db, key, as_raw, missing, readoptions)
+    },
+
     put = function(key, value, writeoptions = NULL) {
       leveldb_put(self$db, key, value, writeoptions)
     },

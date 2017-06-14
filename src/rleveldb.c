@@ -212,6 +212,56 @@ SEXP rleveldb_get(SEXP r_db, SEXP r_key, SEXP r_as_raw,
   return ret;
 }
 
+SEXP rleveldb_mget(SEXP r_db, SEXP r_key, SEXP r_as_raw,
+                   SEXP r_missing, SEXP r_readoptions) {
+  leveldb_t *db = rleveldb_get_db(r_db, true);
+  leveldb_readoptions_t *readoptions =
+    rleveldb_get_readoptions(r_readoptions, true);
+  return_as as_raw = to_return_as(r_as_raw);
+
+  const char **key_data = NULL;
+  size_t *key_len = NULL;
+  size_t num_key = get_keys(r_key, &key_data, &key_len);
+  bool *missing = NULL;
+
+  SEXP ret = PROTECT(allocVector(VECSXP, num_key));
+
+  size_t n_missing = 0;
+  for (size_t i = 0; i < num_key; ++i) {
+    char *err = NULL;
+    size_t read_len;
+    char* read = leveldb_get(db, readoptions, key_data[i], key_len[i],
+                             &read_len, &err);
+    rleveldb_handle_error(err);
+    if (read != NULL) {
+      SET_VECTOR_ELT(ret, i, raw_string_to_sexp(read, read_len, as_raw));
+      leveldb_free(read);
+    } else {
+      SET_VECTOR_ELT(ret, i, r_missing);
+      n_missing++;
+      if (missing == NULL) {
+        missing = (bool*) R_alloc(num_key, sizeof(bool));
+        memset(missing, 0, num_key * sizeof(bool));
+      }
+      missing[i] = true;
+    }
+  }
+
+  if (n_missing > 0) {
+    SEXP ret_missing = PROTECT(allocVector(INTSXP, n_missing));
+    for (size_t i = 0, j = 0; i < num_key; ++i) {
+      if (missing[i]) {
+        INTEGER(ret_missing)[j++] = i + 1;
+      }
+    }
+    setAttrib(ret, install("missing"), ret_missing);
+    UNPROTECT(1);
+  }
+
+  UNPROTECT(1);
+  return ret;
+}
+
 SEXP rleveldb_put(SEXP r_db, SEXP r_key, SEXP r_value, SEXP r_writeoptions) {
   leveldb_t *db = rleveldb_get_db(r_db, true);
   const char *key_data = NULL, *value_data = NULL;
