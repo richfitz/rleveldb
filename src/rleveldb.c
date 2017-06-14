@@ -48,6 +48,9 @@ size_t rleveldb_get_keys_len(leveldb_t *db,
                              leveldb_readoptions_t *readoptions);
 bool rleveldb_get_exists(leveldb_t *db, const char *key_data, size_t key_len,
                          leveldb_readoptions_t *readoptions);
+void rleveldb_get_mexists(leveldb_t *db, size_t num_key,
+                          const char **key_data, size_t *key_len,
+                          leveldb_readoptions_t *readoptions, int *found);
 
 enum rleveldb_tag_index {
   TAG_NAME,
@@ -225,6 +228,9 @@ SEXP rleveldb_put(SEXP r_db, SEXP r_key, SEXP r_value, SEXP r_writeoptions) {
   return R_NilValue;
 }
 
+// This is the simple delete: it just deletes things and does not
+// report back anything about what was done (these keys may or may not
+// exist).
 SEXP rleveldb_delete(SEXP r_db, SEXP r_key, SEXP r_writeoptions) {
   leveldb_t *db = rleveldb_get_db(r_db, true);
   const char *key_data = NULL;
@@ -237,6 +243,49 @@ SEXP rleveldb_delete(SEXP r_db, SEXP r_key, SEXP r_writeoptions) {
   rleveldb_handle_error(err);
 
   return R_NilValue;
+}
+
+// This is quite a bit more complicated; we first iterate through and
+// find out what exists, arranging to return that back to R in the
+// first place.  Then we go through and do the deletion.
+SEXP rleveldb_delete_and_report(SEXP r_db, SEXP r_key, SEXP r_readoptions,
+                                SEXP r_writeoptions) {
+  leveldb_t *db = rleveldb_get_db(r_db, true);
+  const char **key_data = NULL;
+  size_t *key_len = NULL;
+  size_t num_key = get_keys(r_key, &key_data, &key_len);
+
+  // This might fail so I'm doing it up here
+  leveldb_writeoptions_t *writeoptions =
+    rleveldb_get_writeoptions(r_writeoptions, true);
+
+  SEXP r_found = PROTECT(allocVector(LGLSXP, num_key));
+  int *found = INTEGER(r_found);
+
+  leveldb_readoptions_t *readoptions = default_readoptions;
+  leveldb_writebatch_t *writebatch = leveldb_writebatch_create();
+
+  // First, work out what exists:
+  rleveldb_get_mexists(db, num_key, key_data, key_len,
+                       readoptions, INTEGER(r_found));
+
+  bool do_delete = false;
+  for (size_t i = 0; i < num_key; ++i) {
+    if (found[i]) {
+      leveldb_writebatch_delete(writebatch, key_data[i], key_len[i]);
+      do_delete = true;
+    }
+  }
+
+  if (do_delete) {
+    char *err = NULL;
+    leveldb_write(db, writeoptions, writebatch, &err);
+    rleveldb_handle_error(err);
+  }
+
+  leveldb_writebatch_destroy(writebatch);
+  UNPROTECT(1);
+  return r_found;
 }
 
 // Iterators
@@ -545,6 +594,23 @@ SEXP rleveldb_exists(SEXP r_db, SEXP r_key, SEXP r_readoptions) {
   return ScalarLogical(rleveldb_get_exists(db, key_data, key_len, readoptions));
 }
 
+SEXP rleveldb_mexists(SEXP r_db, SEXP r_key, SEXP r_readoptions) {
+  if (length(r_key) == 1) {
+    return rleveldb_exists(r_db, r_key, r_readoptions);
+  }
+  leveldb_t *db = rleveldb_get_db(r_db, true);
+  leveldb_readoptions_t *readoptions =
+    rleveldb_get_readoptions(r_readoptions, true);
+  const char **key_data = NULL;
+  size_t *key_len = NULL;
+  size_t num_key = get_keys(r_key, &key_data, &key_len);
+  SEXP found = PROTECT(allocVector(LGLSXP, num_key));
+  rleveldb_get_mexists(db, num_key, key_data, key_len, readoptions,
+                       INTEGER(found));
+  UNPROTECT(1);
+  return found;
+}
+
 SEXP rleveldb_version() {
   SEXP ret = PROTECT(allocVector(INTSXP, 2));
   INTEGER(ret)[0] = leveldb_major_version();
@@ -752,6 +818,24 @@ bool rleveldb_get_exists(leveldb_t *db, const char *key_data, size_t key_len,
   }
   leveldb_iter_destroy(it);
   return found;
+}
+
+void rleveldb_get_mexists(leveldb_t *db, size_t num_key,
+                          const char **key_data, size_t *key_len,
+                          leveldb_readoptions_t *readoptions, int *found) {
+  leveldb_iterator_t *it = leveldb_create_iterator(db, readoptions);
+  for (size_t i = 0; i < num_key; ++i) {
+    leveldb_iter_seek(it, key_data[i], key_len[i]);
+    if (leveldb_iter_valid(it)) {
+      size_t it_key_len;
+      const char *it_key_data = leveldb_iter_key(it, &it_key_len);
+      found[i] = (it_key_len == key_len[i] &&
+                  memcmp(it_key_data, key_data[i], key_len[i]) == 0);
+    } else {
+      found[i] = 0;
+    }
+  }
+  leveldb_iter_destroy(it);
 }
 
 leveldb_options_t* rleveldb_collect_options(SEXP r_create_if_missing,

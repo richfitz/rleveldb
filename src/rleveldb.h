@@ -20,6 +20,8 @@ SEXP rleveldb_get(SEXP r_db, SEXP r_key, SEXP r_as_raw,
                   SEXP r_error_if_missing, SEXP r_readoptions);
 SEXP rleveldb_put(SEXP r_db, SEXP r_key, SEXP r_value, SEXP r_writeoptions);
 SEXP rleveldb_delete(SEXP r_db, SEXP r_key, SEXP r_writeoptions);
+SEXP rleveldb_delete_and_report(SEXP r_db, SEXP r_key, SEXP r_readoptions,
+                                SEXP r_writeoptions);
 
 SEXP rleveldb_iter_create(SEXP r_db, SEXP r_readoptions);
 SEXP rleveldb_iter_destroy(SEXP r_it, SEXP r_error_if_destroyed);
@@ -52,4 +54,5 @@ SEXP rleveldb_keys(SEXP r_db, SEXP r_starts_with, SEXP r_as_raw,
                    SEXP r_readoptions);
 SEXP rleveldb_keys_len(SEXP r_db, SEXP r_starts_with, SEXP r_readoptions);
 SEXP rleveldb_exists(SEXP r_db, SEXP r_key, SEXP r_readoptions);
+SEXP rleveldb_mexists(SEXP r_db, SEXP r_key, SEXP r_readoptions);
 SEXP rleveldb_version();
