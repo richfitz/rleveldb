@@ -619,6 +619,22 @@ SEXP rleveldb_version() {
   return ret;
 }
 
+// For internal use:
+SEXP rleveldb_tag(SEXP r_db) {
+  return R_ExternalPtrTag(r_db);
+}
+
+// For package management:
+void rleveldb_init() {
+  default_readoptions = leveldb_readoptions_create();
+  default_writeoptions = leveldb_writeoptions_create();
+}
+
+void rleveldb_cleanup() {
+  leveldb_readoptions_destroy(default_readoptions);
+  leveldb_writeoptions_destroy(default_writeoptions);
+}
+
 // Internal function definitions:
 void rleveldb_finalize(SEXP r_db) {
   leveldb_t* db = rleveldb_get_db(r_db, false);
@@ -895,10 +911,6 @@ bool check_iterator(leveldb_iterator_t *it, SEXP r_error_if_invalid) {
 
 leveldb_readoptions_t * default_readoptions = NULL;
 leveldb_writeoptions_t * default_writeoptions = NULL;
-
-SEXP rleveldb_tag(SEXP r_db) {
-  return R_ExternalPtrTag(r_db);
-}
 
 bool iter_key_starts_with(leveldb_iterator_t *it, const char *starts_with,
                           size_t starts_with_len) {

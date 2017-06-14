@@ -229,7 +229,7 @@ test_that("enable cache", {
   db <- leveldb_connect(path,
                         create_if_missing = TRUE,
                         cache_capacity = 1000000)
-  expect_is(.Call("rleveldb_tag", db)[[2]], "externalptr")
+  expect_is(.Call(Crleveldb_tag, db)[[2]], "externalptr")
 
   leveldb_put(db, "foo", "bar")
   expect_equal(leveldb_get(db, "foo"), "bar")
@@ -243,7 +243,7 @@ test_that("enable filter", {
   db <- leveldb_connect(path,
                         create_if_missing = TRUE,
                         bloom_filter_bits_per_key = 10)
-  expect_is(.Call("rleveldb_tag", db)[[3]], "externalptr")
+  expect_is(.Call(Crleveldb_tag, db)[[3]], "externalptr")
 
   leveldb_put(db, "foo", "bar")
   expect_equal(leveldb_get(db, "foo"), "bar")

@@ -56,3 +56,6 @@ SEXP rleveldb_keys_len(SEXP r_db, SEXP r_starts_with, SEXP r_readoptions);
 SEXP rleveldb_exists(SEXP r_db, SEXP r_key, SEXP r_readoptions);
 SEXP rleveldb_mexists(SEXP r_db, SEXP r_key, SEXP r_readoptions);
 SEXP rleveldb_version();
+SEXP rleveldb_tag(SEXP r_db);
+void rleveldb_init();
+void rleveldb_cleanup();

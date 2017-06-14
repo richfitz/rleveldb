@@ -1,17 +1,18 @@
 #include "rleveldb.h"
 #include <R_ext/Rdynload.h>
-#include <leveldb/c.h>
+#include <Rversion.h>
 
 static const R_CallMethodDef call_methods[] = {
-  {"Crleveldb_connect",  (DL_FUNC) &rleveldb_connect,  10},
-  {"Crleveldb_close",    (DL_FUNC) &rleveldb_close,    2},
-  {"Crleveldb_destroy",  (DL_FUNC) &rleveldb_destroy,  1},
-  {"Crleveldb_repair",   (DL_FUNC) &rleveldb_repair,   1},
-  {"Crleveldb_property", (DL_FUNC) &rleveldb_property, 3},
+  {"Crleveldb_connect",            (DL_FUNC) &rleveldb_connect,           10},
+  {"Crleveldb_close",              (DL_FUNC) &rleveldb_close,              2},
+  {"Crleveldb_destroy",            (DL_FUNC) &rleveldb_destroy,            1},
+  {"Crleveldb_repair",             (DL_FUNC) &rleveldb_repair,             1},
+  {"Crleveldb_property",           (DL_FUNC) &rleveldb_property,           3},
 
-  {"Crleveldb_get",      (DL_FUNC) &rleveldb_get,      5},
-  {"Crleveldb_put",      (DL_FUNC) &rleveldb_put,      4},
-  {"Crleveldb_delete",   (DL_FUNC) &rleveldb_delete,   3},
+  {"Crleveldb_get",                (DL_FUNC) &rleveldb_get,                5},
+  {"Crleveldb_put",                (DL_FUNC) &rleveldb_put,                4},
+  {"Crleveldb_delete",             (DL_FUNC) &rleveldb_delete,             3},
+  {"Crleveldb_delete_and_report",  (DL_FUNC) &rleveldb_delete_and_report,  4},
 
   {"Crleveldb_iter_create",        (DL_FUNC) &rleveldb_iter_create,        2},
   {"Crleveldb_iter_destroy",       (DL_FUNC) &rleveldb_iter_destroy,       2},
@@ -44,22 +45,24 @@ static const R_CallMethodDef call_methods[] = {
   {"Crleveldb_exists",             (DL_FUNC) &rleveldb_exists,             3},
   {"Crleveldb_version",            (DL_FUNC) &rleveldb_version,            0},
 
+  // For debugging:
+  {"Crleveldb_tag",                (DL_FUNC) &rleveldb_tag,                1},
+
   {NULL,                           NULL,                                   0}
 };
 
-extern leveldb_readoptions_t * default_readoptions;
-extern leveldb_writeoptions_t * default_writeoptions;
-
 void R_init_rleveldb(DllInfo *info) {
+  rleveldb_init();
   R_registerRoutines(info, NULL, call_methods, NULL, NULL);
-  default_readoptions = leveldb_readoptions_create();
-  default_writeoptions = leveldb_writeoptions_create();
+#if defined(R_VERSION) && R_VERSION >= R_Version(3, 3, 0)
+  R_useDynamicSymbols(info, FALSE);
+  R_forceSymbols(info, TRUE);
+#endif
 }
 
 // This can't be easily tested
 // # nocov start
 void R_unload_rleveldb(DllInfo *info) {
-  leveldb_readoptions_destroy(default_readoptions);
-  leveldb_writeoptions_destroy(default_writeoptions);
+  rleveldb_cleanup();
 }
 // # nocov end
