@@ -132,7 +132,7 @@ SEXP rleveldb_connect(SEXP r_name,
 SEXP rleveldb_close(SEXP r_db, SEXP r_error_if_closed) {
   leveldb_t *db = rleveldb_get_db(r_db, scalar_logical(r_error_if_closed));
   if (db != NULL) {
-    SEXP tag = R_ExternalPtrTag(r_db);
+    SEXP tag = rleveldb_tag(r_db);
     SEXP r_iterators = VECTOR_ELT(tag, TAG_ITERATORS);
     while (r_iterators != R_NilValue) {
       rleveldb_iter_destroy(CAR(r_iterators), ScalarLogical(false));
@@ -298,7 +298,7 @@ SEXP rleveldb_iter_create(SEXP r_db, SEXP r_readoptions) {
   SEXP r_it = PROTECT(R_MakeExternalPtr(it, r_db, R_NilValue));
   R_RegisterCFinalizer(r_it, rleveldb_iter_finalize);
 
-  SEXP db_tag = R_ExternalPtrTag(r_db);
+  SEXP db_tag = rleveldb_tag(r_db);
   SEXP r_iterators = VECTOR_ELT(db_tag, TAG_ITERATORS);
   SET_VECTOR_ELT(db_tag, TAG_ITERATORS, CONS(r_it, r_iterators));
 
@@ -655,7 +655,7 @@ void rleveldb_iter_finalize(SEXP r_it) {
 void rleveldb_snapshot_finalize(SEXP r_snapshot) {
   leveldb_snapshot_t* snapshot = rleveldb_get_snapshot(r_snapshot, false);
   if (snapshot != NULL) {
-    leveldb_t *db = rleveldb_get_db(R_ExternalPtrTag(r_snapshot), false);
+    leveldb_t *db = rleveldb_get_db(rleveldb_tag(r_snapshot), false);
     if (db) {
       leveldb_release_snapshot(db, snapshot);
     }
