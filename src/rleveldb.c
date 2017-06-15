@@ -306,14 +306,17 @@ SEXP rleveldb_delete(SEXP r_db, SEXP r_key, SEXP r_report,
 // exist).
 SEXP rleveldb_delete_silent(SEXP r_db, SEXP r_key, SEXP r_writeoptions) {
   leveldb_t *db = rleveldb_get_db(r_db, true);
-  const char *key_data = NULL;
-  size_t key_len = get_key(r_key, &key_data);
+  const char **key_data = NULL;
+  size_t *key_len = NULL;
+  size_t num_key = get_keys(r_key, &key_data, &key_len);
   leveldb_writeoptions_t *writeoptions =
     rleveldb_get_writeoptions(r_writeoptions, true);
 
-  char *err = NULL;
-  leveldb_delete(db, writeoptions, key_data, key_len, &err);
-  rleveldb_handle_error(err);
+  for (size_t i = 0; i < num_key; ++i) {
+    char *err = NULL;
+    leveldb_delete(db, writeoptions, key_data[i], key_len[i], &err);
+    rleveldb_handle_error(err);
+  }
 
   return R_NilValue;
 }

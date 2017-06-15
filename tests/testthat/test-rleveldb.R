@@ -251,3 +251,25 @@ test_that("enable filter", {
   rm(db)
   gc()
 })
+
+test_that("delete and report", {
+  db <- leveldb_connect(tempfile(), create_if_missing = TRUE)
+
+  ## zero keys:
+  expect_null(leveldb_delete(db, character(0)))
+  expect_equal(leveldb_delete(db, character(0), TRUE), logical(0))
+
+  ## one nonexistant key:
+  expect_null(leveldb_delete(db, "a"))
+  expect_equal(leveldb_delete(db, "a", TRUE), FALSE)
+
+  ## two nonexistant keys:
+  expect_null(leveldb_delete(db, c("a", "b")))
+  expect_equal(leveldb_delete(db, c("a", "b"), TRUE), c(FALSE, FALSE))
+
+  leveldb_mput(db, c("a", "b"), c("a", "b"))
+  expect_equal(leveldb_delete(db, c("a", "b"), TRUE), c(TRUE, TRUE))
+
+  leveldb_put(db, "a", "a")
+  expect_equal(leveldb_delete(db, c("a", "b"), TRUE), c(TRUE, FALSE))
+})
