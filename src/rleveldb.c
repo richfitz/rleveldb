@@ -510,15 +510,17 @@ SEXP rleveldb_writebatch_mput(SEXP r_writebatch, SEXP r_key, SEXP r_value) {
   size_t *key_len = NULL;
   size_t num_key = get_keys(r_key, &key_data, &key_len);
 
-  if (TYPEOF(r_value) != VECSXP) {
-    Rf_error("Expected a list for 'value'");
+  const bool value_is_string = TYPEOF(r_value) == STRSXP;
+  if (!value_is_string && TYPEOF(r_value) != VECSXP) {
+    Rf_error("Expected a character vector of list for 'value'");
   }
   if ((size_t)length(r_value) != num_key) {
     Rf_error("Expected %d values but recieved %d", num_key, length(r_value));
   }
   for (size_t i = 0; i < num_key; ++i) {
     const char *value_data;
-    size_t value_len = get_value(VECTOR_ELT(r_value, i), &value_data);
+    SEXP el = value_is_string ? STRING_ELT(r_value, i) : VECTOR_ELT(r_value, i);
+    size_t value_len = get_value(el, &value_data);
     leveldb_writebatch_put(writebatch, key_data[i], key_len[i],
                            value_data, value_len);
   }

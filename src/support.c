@@ -31,6 +31,10 @@ size_t get_starts_with(SEXP starts_with, const char **starts_with_data) {
 
 size_t get_data(SEXP data, const char **data_contents, const char* name) {
   switch (TYPEOF(data)) {
+  case CHARSXP:
+    *data_contents = CHAR(data);
+    return length(data);
+    break;
   case STRSXP:
     if (length(data) != 1) {
       Rf_error("%s must be a scalar character", name);

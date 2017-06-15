@@ -84,14 +84,28 @@ test_that("clear", {
   expect_true(db$exists("foo"))
 })
 
-test_that("mput", {
+test_that("mput - string", {
   db <- leveldb(tempfile(), create_if_missing = TRUE)
   on.exit(db$destroy())
 
   wb <- db$writebatch()
   k <- unique(replicate(50, rand_str(rpois(1, 5))))
   v <- replicate(length(k), rand_str(rpois(1, 5)))
-  ## should support more types here I think
+  wb$mput(k, v)
+
+  expect_equal(db$keys_len(), 0)
+  wb$write(leveldb_writeoptions(sync = TRUE))
+  expect_equal(db$keys_len(), length(k))
+  expect_true(all(k %in% db$keys()))
+})
+
+test_that("mput - list", {
+  db <- leveldb(tempfile(), create_if_missing = TRUE)
+  on.exit(db$destroy())
+
+  wb <- db$writebatch()
+  k <- unique(replicate(50, rand_str(rpois(1, 5))))
+  v <- replicate(length(k), rand_str(rpois(1, 5)))
   wb$mput(k, as.list(v))
 
   expect_equal(db$keys_len(), 0)
