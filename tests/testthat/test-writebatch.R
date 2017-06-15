@@ -113,3 +113,19 @@ test_that("mput - list", {
   expect_equal(db$keys_len(), length(k))
   expect_true(all(k %in% db$keys()))
 })
+
+test_that("mput - error checking", {
+  db <- leveldb(tempfile(), create_if_missing = TRUE)
+  on.exit(db$destroy())
+
+  wb <- db$writebatch()
+  k <- unique(replicate(50, rand_str(rpois(1, 5))))
+  v <- replicate(length(k), rand_str(rpois(1, 5)))
+
+  expect_error(wb$mput(k, v[-1]),
+               "Expected 50 values but recieved 49")
+  expect_error(wb$mput(k, seq_along(k)),
+               "Expected a character vector or list for 'value'")
+  wb$write(leveldb_writeoptions(sync = TRUE))
+  expect_equal(db$keys_len(), 0)
+})

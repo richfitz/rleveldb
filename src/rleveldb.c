@@ -515,7 +515,7 @@ SEXP rleveldb_writebatch_mput(SEXP r_writebatch, SEXP r_key, SEXP r_value) {
 
   const bool value_is_string = TYPEOF(r_value) == STRSXP;
   if (!value_is_string && TYPEOF(r_value) != VECSXP) {
-    Rf_error("Expected a character vector of list for 'value'");
+    Rf_error("Expected a character vector or list for 'value'");
   }
   if ((size_t)length(r_value) != num_key) {
     Rf_error("Expected %d values but recieved %d", num_key, length(r_value));
