@@ -2,6 +2,13 @@
 #include <R_ext/Rdynload.h>
 #include <Rversion.h>
 
+// for testing:
+SEXP rleveldb_test_cleanup() {
+  rleveldb_cleanup();
+  rleveldb_init();
+  return R_NilValue;
+}
+
 static const R_CallMethodDef call_methods[] = {
   {"Crleveldb_connect",            (DL_FUNC) &rleveldb_connect,           10},
   {"Crleveldb_close",              (DL_FUNC) &rleveldb_close,              2},
@@ -49,6 +56,9 @@ static const R_CallMethodDef call_methods[] = {
 
   // For debugging:
   {"Crleveldb_tag",                (DL_FUNC) &rleveldb_tag,                1},
+
+  // For testing:
+  {"Crleveldb_test_cleanup",       (DL_FUNC) &rleveldb_test_cleanup,       0},
 
   {NULL,                           NULL,                                   0}
 };

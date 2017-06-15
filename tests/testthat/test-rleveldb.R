@@ -273,3 +273,10 @@ test_that("delete and report", {
   leveldb_put(db, "a", "a")
   expect_equal(leveldb_delete(db, c("a", "b"), TRUE), c(TRUE, FALSE))
 })
+
+test_that("cleanup", {
+  expect_null(.Call(Crleveldb_test_cleanup))
+  expect_null(.Call(Crleveldb_test_cleanup))
+  db <- leveldb_connect(tempfile(), create_if_missing = TRUE)
+  expect_false(leveldb_exists(db, "a"))
+})

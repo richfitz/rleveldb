@@ -731,8 +731,8 @@ void rleveldb_init() {
 }
 
 void rleveldb_cleanup() {
-  leveldb_readoptions_destroy(default_readoptions);
-  leveldb_writeoptions_destroy(default_writeoptions);
+  leveldb_readoptions_destroy(default_readoptions); // #nocov
+  leveldb_writeoptions_destroy(default_writeoptions); // #nocov
 }
 
 // Internal function definitions:
