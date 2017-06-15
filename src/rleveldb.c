@@ -46,11 +46,9 @@ bool iter_key_starts_with(leveldb_iterator_t *it, const char *starts_with,
 size_t rleveldb_get_keys_len(leveldb_t *db,
                              const char *starts_with, size_t starts_with_len,
                              leveldb_readoptions_t *readoptions);
-bool rleveldb_get_exists(leveldb_t *db, const char *key_data, size_t key_len,
-                         leveldb_readoptions_t *readoptions);
-void rleveldb_get_mexists(leveldb_t *db, size_t num_key,
-                          const char **key_data, size_t *key_len,
-                          leveldb_readoptions_t *readoptions, int *found);
+void rleveldb_get_exists(leveldb_t *db, size_t num_key,
+                         const char **key_data, size_t *key_len,
+                         leveldb_readoptions_t *readoptions, int *found);
 
 enum rleveldb_tag_index {
   TAG_NAME,
@@ -339,12 +337,13 @@ SEXP rleveldb_delete_report(SEXP r_db, SEXP r_key, SEXP r_readoptions,
   int *found = INTEGER(r_found);
 
   leveldb_readoptions_t *readoptions = default_readoptions;
-  // TODO: leak danger on throw
+  // NOTE: leak danger on throw, so nothing between here and the
+  // writebatch_destroys may throw (and therefore can't use the R
+  // API).
   leveldb_writebatch_t *writebatch = leveldb_writebatch_create();
 
   // First, work out what exists:
-  rleveldb_get_mexists(db, num_key, key_data, key_len,
-                       readoptions, INTEGER(r_found));
+  rleveldb_get_exists(db, num_key, key_data, key_len, readoptions, found);
 
   bool do_delete = false;
   for (size_t i = 0; i < num_key; ++i) {
@@ -357,10 +356,15 @@ SEXP rleveldb_delete_report(SEXP r_db, SEXP r_key, SEXP r_readoptions,
   if (do_delete) {
     char *err = NULL;
     leveldb_write(db, writeoptions, writebatch, &err);
+    // NOTE: This must come here *and* in the else (but not outside
+    // the if/else) because that way we don't leak the writebatch
+    // object on error.
+    leveldb_writebatch_destroy(writebatch);
     rleveldb_handle_error(err);
+  } else {
+    leveldb_writebatch_destroy(writebatch);
   }
 
-  leveldb_writebatch_destroy(writebatch);
   UNPROTECT(1);
   return r_found;
 }
@@ -687,28 +691,16 @@ SEXP rleveldb_keys_len(SEXP r_db, SEXP r_starts_with, SEXP r_readoptions) {
 
 SEXP rleveldb_exists(SEXP r_db, SEXP r_key, SEXP r_readoptions) {
   leveldb_t *db = rleveldb_get_db(r_db, true);
-  const char *key_data = NULL;
-  size_t key_len = get_key(r_key, &key_data);
-  leveldb_readoptions_t *readoptions =
-    rleveldb_get_readoptions(r_readoptions, true);
-  return ScalarLogical(rleveldb_get_exists(db, key_data, key_len, readoptions));
-}
-
-SEXP rleveldb_mexists(SEXP r_db, SEXP r_key, SEXP r_readoptions) {
-  if (length(r_key) == 1) {
-    return rleveldb_exists(r_db, r_key, r_readoptions);
-  }
-  leveldb_t *db = rleveldb_get_db(r_db, true);
   leveldb_readoptions_t *readoptions =
     rleveldb_get_readoptions(r_readoptions, true);
   const char **key_data = NULL;
   size_t *key_len = NULL;
   size_t num_key = get_keys(r_key, &key_data, &key_len);
-  SEXP found = PROTECT(allocVector(LGLSXP, num_key));
-  rleveldb_get_mexists(db, num_key, key_data, key_len, readoptions,
-                       INTEGER(found));
+  SEXP r_found = PROTECT(allocVector(LGLSXP, num_key));
+  int *found = INTEGER(r_found);
+  rleveldb_get_exists(db, num_key, key_data, key_len, readoptions, found);
   UNPROTECT(1);
-  return found;
+  return r_found;
 }
 
 SEXP rleveldb_version() {
@@ -919,26 +911,12 @@ size_t rleveldb_get_keys_len(leveldb_t *db,
   return n;
 }
 
-bool rleveldb_get_exists(leveldb_t *db, const char *key_data, size_t key_len,
-                         leveldb_readoptions_t *readoptions) {
-  leveldb_iterator_t *it = leveldb_create_iterator(db, readoptions);
-  leveldb_iter_seek(it, key_data, key_len);
-
-  bool found = false;
-  if (leveldb_iter_valid(it)) {
-    size_t it_key_len;
-    const char *it_key_data = leveldb_iter_key(it, &it_key_len);
-    if (it_key_len == key_len && memcmp(it_key_data, key_data, key_len) == 0) {
-      found = true;
-    }
-  }
-  leveldb_iter_destroy(it);
-  return found;
-}
-
-void rleveldb_get_mexists(leveldb_t *db, size_t num_key,
-                          const char **key_data, size_t *key_len,
-                          leveldb_readoptions_t *readoptions, int *found) {
+// NOTE: this uses `int*` for found, not `bool*` because it is
+// designed to work with passing things back using an R LGLSXP (where
+// things are stored as integers because of NA values)
+void rleveldb_get_exists(leveldb_t *db, size_t num_key,
+                         const char **key_data, size_t *key_len,
+                         leveldb_readoptions_t *readoptions, int *found) {
   leveldb_iterator_t *it = leveldb_create_iterator(db, readoptions);
   for (size_t i = 0; i < num_key; ++i) {
     leveldb_iter_seek(it, key_data[i], key_len[i]);
