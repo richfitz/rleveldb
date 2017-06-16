@@ -51,7 +51,7 @@ void rleveldb_get_exists(leveldb_t *db, size_t num_key,
                          leveldb_readoptions_t *readoptions, int *found);
 
 enum rleveldb_tag_index {
-  TAG_NAME,
+  TAG_PATH,
   TAG_CACHE,
   TAG_FILTERPOLICY,
   TAG_ITERATORS,
@@ -59,7 +59,7 @@ enum rleveldb_tag_index {
 };
 
 // Implementations:
-SEXP rleveldb_connect(SEXP r_name,
+SEXP rleveldb_connect(SEXP r_path,
                       SEXP r_create_if_missing,
                       SEXP r_error_if_exists,
                       SEXP r_paranoid_checks,
@@ -96,7 +96,7 @@ SEXP rleveldb_connect(SEXP r_name,
       PROTECT(R_MakeExternalPtr(filterpolicy, R_NilValue, R_NilValue));
     R_RegisterCFinalizer(r_filterpolicy_ptr, rleveldb_filterpolicy_finalize);
   }
-  const char *name = scalar_character(r_name);
+  const char *path = scalar_character(r_path);
   leveldb_options_t *options =
     rleveldb_collect_options(r_create_if_missing, r_error_if_exists,
                              r_paranoid_checks, r_write_buffer_size,
@@ -110,12 +110,12 @@ SEXP rleveldb_connect(SEXP r_name,
   }
 
   char *err = NULL;
-  leveldb_t *db = leveldb_open(options, name, &err);
+  leveldb_t *db = leveldb_open(options, path, &err);
   leveldb_options_destroy(options);
   rleveldb_handle_error(err);
 
   SEXP tag = PROTECT(allocVector(VECSXP, TAG_LENGTH));
-  SET_VECTOR_ELT(tag, TAG_NAME, r_name);
+  SET_VECTOR_ELT(tag, TAG_PATH, r_path);
   SET_VECTOR_ELT(tag, TAG_CACHE, r_cache_ptr);
   SET_VECTOR_ELT(tag, TAG_FILTERPOLICY, r_filterpolicy_ptr);
   SET_VECTOR_ELT(tag, TAG_ITERATORS, R_NilValue); // will be a pairlist
@@ -142,21 +142,21 @@ SEXP rleveldb_close(SEXP r_db, SEXP r_error_if_closed) {
   return ScalarLogical(db != NULL);
 }
 
-SEXP rleveldb_destroy(SEXP r_name) {
-  const char *name = scalar_character(r_name);
+SEXP rleveldb_destroy(SEXP r_path) {
+  const char *path = scalar_character(r_path);
   leveldb_options_t *options = leveldb_options_create();
   char *err = NULL;
-  leveldb_destroy_db(options, name, &err);
+  leveldb_destroy_db(options, path, &err);
   leveldb_options_destroy(options);
   rleveldb_handle_error(err);
   return ScalarLogical(true);
 }
 
-SEXP rleveldb_repair(SEXP r_name) {
-  const char *name = scalar_character(r_name);
+SEXP rleveldb_repair(SEXP r_path) {
+  const char *path = scalar_character(r_path);
   leveldb_options_t *options = leveldb_options_create();
   char *err = NULL;
-  leveldb_repair_db(options, name, &err);
+  leveldb_repair_db(options, path, &err);
   leveldb_options_destroy(options);
   rleveldb_handle_error(err);
   return ScalarLogical(true);

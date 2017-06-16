@@ -1,7 +1,7 @@
 #include <R.h>
 #include <Rinternals.h>
 
-SEXP rleveldb_connect(SEXP r_name,
+SEXP rleveldb_connect(SEXP r_path,
                       SEXP r_create_if_missing,
                       SEXP r_error_if_exists,
                       SEXP r_paranoid_checks,
@@ -12,8 +12,8 @@ SEXP rleveldb_connect(SEXP r_name,
                       SEXP r_cache_capacity,
                       SEXP r_bloom_filter_bits_per_key);
 SEXP rleveldb_close(SEXP r_db, SEXP r_error_if_closed);
-SEXP rleveldb_destroy(SEXP r_name);
-SEXP rleveldb_repair(SEXP r_name);
+SEXP rleveldb_destroy(SEXP r_path);
+SEXP rleveldb_repair(SEXP r_path);
 SEXP rleveldb_property(SEXP r_db, SEXP r_name, SEXP r_error_if_missing);
 
 SEXP rleveldb_get(SEXP r_db, SEXP r_key, SEXP r_as_raw,

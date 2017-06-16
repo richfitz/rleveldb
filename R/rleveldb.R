@@ -68,7 +68,7 @@
 ##' @export
 ##' @author Rich FitzJohn
 ##' @useDynLib rleveldb, .registration = TRUE
-leveldb_connect <- function(name,
+leveldb_connect <- function(path,
                             create_if_missing = NULL,
                             error_if_exists = NULL,
                             paranoid_checks = NULL,
@@ -78,11 +78,11 @@ leveldb_connect <- function(name,
                             use_compression = NULL,
                             cache_capacity = NULL,
                             bloom_filter_bits_per_key = NULL) {
-  ptr <- .Call(Crleveldb_connect, name, create_if_missing, error_if_exists,
+  ptr <- .Call(Crleveldb_connect, path, create_if_missing, error_if_exists,
                paranoid_checks, write_buffer_size, max_open_files,
                block_size, use_compression,
                cache_capacity, bloom_filter_bits_per_key)
-  attr(ptr, "options") <- list(name = name,
+  attr(ptr, "options") <- list(path = path,
                                create_if_missing = create_if_missing,
                                error_if_exists = error_if_exists,
                                paranoid_checks = paranoid_checks,
@@ -101,16 +101,16 @@ leveldb_close <- function(db, error_if_closed = FALSE) {
   .Call(Crleveldb_close, db, error_if_closed)
 }
 
-leveldb_destroy <- function(name) {
-  .Call(Crleveldb_destroy, name)
+leveldb_destroy <- function(path) {
+  .Call(Crleveldb_destroy, path)
 }
 
-leveldb_repair <- function(name) {
-  .Call(Crleveldb_repair, name)
+leveldb_repair <- function(path) {
+  .Call(Crleveldb_repair, path)
 }
 
-leveldb_property <- function(db, name, error_if_missing = FALSE) {
-  .Call(Crleveldb_property, db, name, error_if_missing)
+leveldb_property <- function(db, path, error_if_missing = FALSE) {
+  .Call(Crleveldb_property, db, path, error_if_missing)
 }
 
 leveldb_get <- function(db, key, as_raw = NULL, error_if_missing = FALSE,

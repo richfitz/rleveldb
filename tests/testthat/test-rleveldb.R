@@ -205,7 +205,7 @@ test_that("simple options", {
                         block_size = 8192L,
                         use_compression = FALSE)
 
-  expect_output(print(db), paste0("name: ", path))
+  expect_output(print(db), paste0("path: ", path))
   expect_output(print(db), "create_if_missing: TRUE")
   expect_output(print(db), "error_if_exists: TRUE")
   expect_output(print(db), "paranoid_checks: TRUE")
