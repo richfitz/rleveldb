@@ -288,7 +288,7 @@ names.leveldb_options <- function(x, ...) {
 }
 
 ##' @export
-`[[<-.leveldb_options` <- function(x, i, value, ...) {
+`[[<-.leveldb_options` <- function(x, ..., value) {
   stop(sprintf("%s objects are immutable", class(x)[[1L]]))
 }
 

@@ -5,3 +5,4 @@
 ^TODO\.md$
 ^notes\.md$
 \.so.dSYM$
+^man-roxygen$
