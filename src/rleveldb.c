@@ -211,19 +211,21 @@ SEXP rleveldb_get(SEXP r_db, SEXP r_key, SEXP r_as_raw,
 }
 
 SEXP rleveldb_mget(SEXP r_db, SEXP r_key, SEXP r_as_raw,
-                   SEXP r_missing, SEXP r_readoptions, SEXP r_report_missing) {
+                   SEXP r_missing_value, SEXP r_missing_report,
+                   SEXP r_readoptions) {
   leveldb_t *db = rleveldb_get_db(r_db, true);
   leveldb_readoptions_t *readoptions =
     rleveldb_get_readoptions(r_readoptions, true);
   return_as as_raw = to_return_as(r_as_raw);
-  bool report_missing = scalar_logical(r_report_missing);
+  bool missing_report = scalar_logical(r_missing_report);
   if (as_raw == AS_STRING) {
-    if (r_missing == R_NilValue) {
-      r_missing = NA_STRING;
-    } else if (TYPEOF(r_missing) != STRSXP || length(r_missing) != 1) {
-      Rf_error("If as_raw = TRUE, missing must be a scalar character");
+    if (r_missing_value == R_NilValue) {
+      r_missing_value = NA_STRING;
+    } else if (TYPEOF(r_missing_value) != STRSXP ||
+               length(r_missing_value) != 1) {
+      Rf_error("If as_raw = TRUE, missing_value must be a scalar character");
     } else {
-      r_missing = STRING_ELT(r_missing, 0);
+      r_missing_value = STRING_ELT(r_missing_value, 0);
     }
   }
 
@@ -253,11 +255,11 @@ SEXP rleveldb_mget(SEXP r_db, SEXP r_key, SEXP r_as_raw,
       UNPROTECT(1);
     } else {
       if (as_raw == AS_STRING) {
-        SET_STRING_ELT(ret, i, r_missing);
+        SET_STRING_ELT(ret, i, r_missing_value);
       } else {
-        SET_VECTOR_ELT(ret, i, r_missing);
+        SET_VECTOR_ELT(ret, i, r_missing_value);
       }
-      if (report_missing) {
+      if (missing_report) {
         n_missing++;
         if (missing == NULL) {
           missing = (bool*) R_alloc(num_key, sizeof(bool));

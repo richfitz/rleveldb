@@ -290,9 +290,9 @@ test_that("mget", {
   leveldb_mget(db, "foo", FALSE, NA_character_)
   leveldb_mget(db, "foo", FALSE, NULL)
   expect_error(leveldb_mget(db, "foo", FALSE, 1),
-               "missing must be a scalar character")
+               "missing_value must be a scalar character")
   expect_equal(leveldb_mget(db, c("foo", "bar"), FALSE),
                structure(c("bar", NA), missing = 2))
-  expect_equal(leveldb_mget(db, c("foo", "bar"), FALSE, report_missing = FALSE),
+  expect_equal(leveldb_mget(db, c("foo", "bar"), FALSE, missing_report = FALSE),
                c("bar", NA))
 })

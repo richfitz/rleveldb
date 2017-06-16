@@ -39,9 +39,10 @@ R6_leveldb <- R6::R6Class(
                    readoptions = NULL) {
       leveldb_get(self$db, key, as_raw, error_if_missing, readoptions)
     },
-    mget = function(key, as_raw = NULL, missing = NULL, readoptions = NULL,
-                    report_missing = TRUE) {
-      leveldb_mget(self$db, key, as_raw, missing, report_missing, readoptions)
+    mget = function(key, as_raw = NULL, missing_value = NULL,
+                    missing_report = TRUE, readoptions = NULL) {
+      leveldb_mget(self$db, key, as_raw, missing_value, missing_report,
+                   readoptions)
     },
 
     put = function(key, value, writeoptions = NULL) {

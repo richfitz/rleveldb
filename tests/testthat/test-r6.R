@@ -141,7 +141,7 @@ test_that("mget", {
   expect_equal(db$mget(c("a", "b")), list("a", "b"))
   expect_equal(db$mget(c("a", "c")),
                structure(list("a", NULL), missing = 2L))
-  expect_equal(db$mget(c("a", "c"), missing = NA_character_),
+  expect_equal(db$mget(c("a", "c"), missing_value = NA_character_),
                structure(list("a", NA_character_), missing = 2L))
   expect_equal(db$mget(character(0)), list())
   expect_equal(db$mget(c("a", "a")), list("a", "a"))

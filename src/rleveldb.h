@@ -19,7 +19,8 @@ SEXP rleveldb_property(SEXP r_db, SEXP r_name, SEXP r_error_if_missing);
 SEXP rleveldb_get(SEXP r_db, SEXP r_key, SEXP r_as_raw,
                   SEXP r_error_if_missing, SEXP r_readoptions);
 SEXP rleveldb_mget(SEXP r_db, SEXP r_key, SEXP r_as_raw,
-                   SEXP r_missing, SEXP r_readoptions, SEXP r_report_missing);
+                   SEXP r_missing_value, SEXP r_missing_report,
+                   SEXP r_readoptions);
 
 SEXP rleveldb_put(SEXP r_db, SEXP r_key, SEXP r_value, SEXP r_writeoptions);
 SEXP rleveldb_mput(SEXP r_db, SEXP r_key, SEXP r_value, SEXP r_writeoptions);
