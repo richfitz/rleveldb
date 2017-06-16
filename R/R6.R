@@ -22,7 +22,7 @@ R6_leveldb <- R6::R6Class(
     path = NULL,
     initialize = function(path, ...) {
       self$path <- path
-      self$db <- leveldb_connect(path, ...)
+      self$db <- leveldb_open(path, ...)
     },
     close = function(error_if_closed = FALSE) {
       leveldb_close(self$db, error_if_closed)

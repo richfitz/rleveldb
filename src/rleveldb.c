@@ -59,7 +59,7 @@ enum rleveldb_tag_index {
 };
 
 // Implementations:
-SEXP rleveldb_connect(SEXP r_path,
+SEXP rleveldb_open(SEXP r_path,
                       SEXP r_create_if_missing,
                       SEXP r_error_if_exists,
                       SEXP r_paranoid_checks,

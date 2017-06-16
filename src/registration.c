@@ -10,7 +10,7 @@ SEXP rleveldb_test_cleanup() {
 }
 
 static const R_CallMethodDef call_methods[] = {
-  {"Crleveldb_connect",            (DL_FUNC) &rleveldb_connect,           10},
+  {"Crleveldb_open",               (DL_FUNC) &rleveldb_open,              10},
   {"Crleveldb_close",              (DL_FUNC) &rleveldb_close,              2},
   {"Crleveldb_destroy",            (DL_FUNC) &rleveldb_destroy,            1},
   {"Crleveldb_repair",             (DL_FUNC) &rleveldb_repair,             1},

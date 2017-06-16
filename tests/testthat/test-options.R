@@ -29,7 +29,7 @@ test_that("readoptions - default", {
 })
 
 test_that("readoptions - set", {
-  db <- leveldb_connect(tempfile(), create_if_missing = TRUE)
+  db <- leveldb_open(tempfile(), create_if_missing = TRUE)
   ss <- leveldb_snapshot(db)
 
   opt <- leveldb_readoptions(TRUE, TRUE, ss)

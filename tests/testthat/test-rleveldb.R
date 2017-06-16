@@ -5,7 +5,7 @@ context("rleveldb")
 ## really requires checking that they point at the right thing and
 ## that's really hard.
 test_that("open, close", {
-  db <- leveldb_connect(tempfile(), create_if_missing = TRUE)
+  db <- leveldb_open(tempfile(), create_if_missing = TRUE)
   expect_true(leveldb_close(db))
   expect_false(leveldb_close(db))
   expect_error(leveldb_close(db, TRUE),
@@ -16,7 +16,7 @@ test_that("open, close", {
 
 test_that("destroy", {
   path <- tempfile()
-  db <- leveldb_connect(path, create_if_missing = TRUE)
+  db <- leveldb_open(path, create_if_missing = TRUE)
   expect_identical(leveldb_keys_len(db), 0L)
 
   expect_error(leveldb_destroy(path), "IO error: lock")
@@ -29,7 +29,7 @@ test_that("destroy", {
 })
 
 test_that("CRUD", {
-  db <- leveldb_connect(tempfile(), create_if_missing = TRUE)
+  db <- leveldb_open(tempfile(), create_if_missing = TRUE)
 
   leveldb_put(db, "foo", "bar")
   expect_equal(leveldb_get(db, "foo"), "bar")
@@ -43,7 +43,7 @@ test_that("CRUD", {
 })
 
 test_that("iterator", {
-  db <- leveldb_connect(tempfile(), create_if_missing = TRUE)
+  db <- leveldb_open(tempfile(), create_if_missing = TRUE)
   leveldb_put(db, "foo", "bar")
   it <- leveldb_iter_create(db)
   expect_false(leveldb_iter_valid(it))
@@ -68,7 +68,7 @@ test_that("iterator", {
 })
 
 test_that("Get missing key", {
-  db <- leveldb_connect(tempfile(), create_if_missing = TRUE)
+  db <- leveldb_open(tempfile(), create_if_missing = TRUE)
   expect_null(leveldb_get(db, "foo"))
   expect_error(leveldb_get(db, "foo", error_if_missing = TRUE),
                "Key 'foo' not found in database")
@@ -80,7 +80,7 @@ test_that("Get missing key", {
 })
 
 test_that("keys", {
-  db <- leveldb_connect(tempfile(), create_if_missing = TRUE)
+  db <- leveldb_open(tempfile(), create_if_missing = TRUE)
   expect_identical(leveldb_keys_len(db), 0L)
   expect_identical(leveldb_keys(db, as_raw = TRUE), list())
   expect_identical(leveldb_keys(db, as_raw = NULL), list())
@@ -97,7 +97,7 @@ test_that("keys", {
 })
 
 test_that("keys - starts_with", {
-  db <- leveldb_connect(tempfile(), create_if_missing = TRUE)
+  db <- leveldb_open(tempfile(), create_if_missing = TRUE)
   prefix <- rand_str()
   expect_identical(leveldb_keys_len(db, prefix), 0L)
 
@@ -123,7 +123,7 @@ test_that("keys - starts_with", {
 })
 
 test_that("exists", {
-  db <- leveldb_connect(tempfile(), create_if_missing = TRUE)
+  db <- leveldb_open(tempfile(), create_if_missing = TRUE)
   expect_false(leveldb_exists(db, "foo"))
   leveldb_put(db, "foo", "bar")
   expect_true(leveldb_exists(db, "foo"))
@@ -138,7 +138,7 @@ test_that("version", {
 })
 
 test_that("properties", {
-  db <- leveldb_connect(tempfile(), create_if_missing = TRUE)
+  db <- leveldb_open(tempfile(), create_if_missing = TRUE)
   expect_is(leveldb_property(db, "leveldb.stats"), "character")
   expect_null(leveldb_property(db, "nosuchproperty"))
   expect_error(leveldb_property(db, "nosuchproperty", TRUE),
@@ -147,11 +147,11 @@ test_that("properties", {
 
 test_that("repair", {
   path <- tempfile()
-  db <- leveldb_connect(path, create_if_missing = TRUE)
+  db <- leveldb_open(path, create_if_missing = TRUE)
   leveldb_put(db, "foo", "bar")
   leveldb_close(db)
   expect_true(leveldb_repair(path))
-  db2 <- leveldb_connect(path)
+  db2 <- leveldb_open(path)
   expect_equal(leveldb_get(db2, "foo"), "bar")
   leveldb_close(db2)
   unlink(path, recursive = TRUE)
@@ -159,7 +159,7 @@ test_that("repair", {
 
 test_that("raw detection -- serialized objects", {
   path <- tempfile()
-  db <- leveldb_connect(path, create_if_missing = TRUE)
+  db <- leveldb_open(path, create_if_missing = TRUE)
 
   x <- runif(10)
   sx <- serialize(x, NULL)
@@ -175,7 +175,7 @@ test_that("raw detection -- serialized objects", {
 
 test_that("raw detection -- embedded nul", {
   path <- tempfile()
-  db <- leveldb_connect(path, create_if_missing = TRUE)
+  db <- leveldb_open(path, create_if_missing = TRUE)
 
   ## NOTE: this guarantees an _embedded_ nul and x != y
   x <- as.raw(c(1L, sample(0:255), 2L))
@@ -196,7 +196,7 @@ test_that("raw detection -- embedded nul", {
 
 test_that("simple options", {
   path <- tempfile()
-  db <- leveldb_connect(path,
+  db <- leveldb_open(path,
                         create_if_missing = TRUE,
                         error_if_exists = TRUE,
                         paranoid_checks = TRUE,
@@ -217,16 +217,16 @@ test_that("simple options", {
 
 test_that("error_if_exists", {
   path <- tempfile()
-  db <- leveldb_connect(path, create_if_missing = TRUE)
+  db <- leveldb_open(path, create_if_missing = TRUE)
   leveldb_close(db)
-  expect_error(leveldb_connect(path, error_if_exists = TRUE),
+  expect_error(leveldb_open(path, error_if_exists = TRUE),
                "exists (error_if_exists is true)", fixed = TRUE)
 })
 
 test_that("enable cache", {
   ## skip("not working")
   path <- tempfile()
-  db <- leveldb_connect(path,
+  db <- leveldb_open(path,
                         create_if_missing = TRUE,
                         cache_capacity = 1000000)
   expect_is(.Call(Crleveldb_tag, db)[[2]], "externalptr")
@@ -240,7 +240,7 @@ test_that("enable cache", {
 
 test_that("enable filter", {
   path <- tempfile()
-  db <- leveldb_connect(path,
+  db <- leveldb_open(path,
                         create_if_missing = TRUE,
                         bloom_filter_bits_per_key = 10)
   expect_is(.Call(Crleveldb_tag, db)[[3]], "externalptr")
@@ -253,7 +253,7 @@ test_that("enable filter", {
 })
 
 test_that("delete and report", {
-  db <- leveldb_connect(tempfile(), create_if_missing = TRUE)
+  db <- leveldb_open(tempfile(), create_if_missing = TRUE)
 
   ## zero keys:
   expect_null(leveldb_delete(db, character(0)))
@@ -277,12 +277,12 @@ test_that("delete and report", {
 test_that("cleanup", {
   expect_null(.Call(Crleveldb_test_cleanup))
   expect_null(.Call(Crleveldb_test_cleanup))
-  db <- leveldb_connect(tempfile(), create_if_missing = TRUE)
+  db <- leveldb_open(tempfile(), create_if_missing = TRUE)
   expect_false(leveldb_exists(db, "a"))
 })
 
 test_that("mget", {
-  db <- leveldb_connect(tempfile(), create_if_missing = TRUE)
+  db <- leveldb_open(tempfile(), create_if_missing = TRUE)
 
   leveldb_put(db, "foo", "bar")
   expect_equal(leveldb_get(db, "foo"), "bar")

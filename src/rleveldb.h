@@ -1,16 +1,16 @@
 #include <R.h>
 #include <Rinternals.h>
 
-SEXP rleveldb_connect(SEXP r_path,
-                      SEXP r_create_if_missing,
-                      SEXP r_error_if_exists,
-                      SEXP r_paranoid_checks,
-                      SEXP r_write_buffer_size,
-                      SEXP r_max_open_files,
-                      SEXP r_block_size,
-                      SEXP r_use_compression,
-                      SEXP r_cache_capacity,
-                      SEXP r_bloom_filter_bits_per_key);
+SEXP rleveldb_open(SEXP r_path,
+                   SEXP r_create_if_missing,
+                   SEXP r_error_if_exists,
+                   SEXP r_paranoid_checks,
+                   SEXP r_write_buffer_size,
+                   SEXP r_max_open_files,
+                   SEXP r_block_size,
+                   SEXP r_use_compression,
+                   SEXP r_cache_capacity,
+                   SEXP r_bloom_filter_bits_per_key);
 SEXP rleveldb_close(SEXP r_db, SEXP r_error_if_closed);
 SEXP rleveldb_destroy(SEXP r_path);
 SEXP rleveldb_repair(SEXP r_path);

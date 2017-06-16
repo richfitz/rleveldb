@@ -7,7 +7,7 @@
 ##' documentation.
 ##'
 ##' This function returns an "R6" class with a number of methods.
-##' @title Connect to a LevelDB Database
+##' @title Open a LevelDB Database
 ##'
 ##' @param path The path to the database, as stored on the filesystem.
 ##'   This will create a \emph{directory} at this path if one does not
@@ -68,17 +68,17 @@
 ##' @export
 ##' @author Rich FitzJohn
 ##' @useDynLib rleveldb, .registration = TRUE
-leveldb_connect <- function(path,
-                            create_if_missing = NULL,
-                            error_if_exists = NULL,
-                            paranoid_checks = NULL,
-                            write_buffer_size = NULL,
-                            max_open_files = NULL,
-                            block_size = NULL,
-                            use_compression = NULL,
-                            cache_capacity = NULL,
-                            bloom_filter_bits_per_key = NULL) {
-  ptr <- .Call(Crleveldb_connect, path, create_if_missing, error_if_exists,
+leveldb_open <- function(path,
+                         create_if_missing = NULL,
+                         error_if_exists = NULL,
+                         paranoid_checks = NULL,
+                         write_buffer_size = NULL,
+                         max_open_files = NULL,
+                         block_size = NULL,
+                         use_compression = NULL,
+                         cache_capacity = NULL,
+                         bloom_filter_bits_per_key = NULL) {
+  ptr <- .Call(Crleveldb_open, path, create_if_missing, error_if_exists,
                paranoid_checks, write_buffer_size, max_open_files,
                block_size, use_compression,
                cache_capacity, bloom_filter_bits_per_key)

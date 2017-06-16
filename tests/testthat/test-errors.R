@@ -2,7 +2,7 @@ context("error handling")
 
 test_that("as_raw", {
   path <- tempfile()
-  db <- leveldb_connect(path, create_if_missing = TRUE)
+  db <- leveldb_open(path, create_if_missing = TRUE)
 
   expect_error(leveldb_get(db, "foo", NA),
                "Expected a non-missing logical scalar (or NULL)", fixed = TRUE)
@@ -12,7 +12,7 @@ test_that("as_raw", {
 
 test_that("key error handling", {
   path <- tempfile()
-  db <- leveldb_connect(path, create_if_missing = TRUE)
+  db <- leveldb_open(path, create_if_missing = TRUE)
   expect_error(leveldb_get(db, c("a", "b")),
                "key must be a scalar character")
   expect_error(leveldb_get(db, NULL),
@@ -29,14 +29,14 @@ test_that("logical error handling", {
 })
 
 test_that("name error handling", {
-  expect_error(leveldb_connect(NULL), "Expected a scalar string")
-  expect_error(leveldb_connect(letters), "Expected a scalar string")
-  expect_error(leveldb_connect(TRUE), "Expected a scalar string")
+  expect_error(leveldb_open(NULL), "Expected a scalar string")
+  expect_error(leveldb_open(letters), "Expected a scalar string")
+  expect_error(leveldb_open(TRUE), "Expected a scalar string")
 })
 
 test_that("approximate_sizes error handling", {
   path <- tempfile()
-  db <- leveldb_connect(path, create_if_missing = TRUE)
+  db <- leveldb_open(path, create_if_missing = TRUE)
   expect_error(leveldb_approximate_sizes(db, "a", character(0)),
                "Expected 'limit_key' to be a length 1 vector")
   expect_error(leveldb_approximate_sizes(db, "a", letters),
@@ -56,7 +56,7 @@ test_that("iterator handle handles safely", {
                "leveldb iterator is not open")
   path <- tempfile()
 
-  db <- leveldb_connect(path, create_if_missing = TRUE)
+  db <- leveldb_open(path, create_if_missing = TRUE)
   it <- leveldb_iter_create(db)
   leveldb_iter_destroy(it)
   expect_error(leveldb_iter_valid(it), "leveldb iterator is not open")
@@ -80,7 +80,7 @@ test_that("writebatch handle handles safely", {
 
 test_that("readoptions handle handles safely", {
   path <- tempfile()
-  db <- leveldb_connect(path, create_if_missing = TRUE)
+  db <- leveldb_open(path, create_if_missing = TRUE)
   expect_error(leveldb_iter_create(db, readoptions = 1),
                "Expected an external pointer")
   expect_error(leveldb_iter_create(db, readoptions = null_pointer()),
@@ -89,7 +89,7 @@ test_that("readoptions handle handles safely", {
 
 test_that("writeoptions handle handles safely", {
   path <- tempfile()
-  db <- leveldb_connect(path, create_if_missing = TRUE)
+  db <- leveldb_open(path, create_if_missing = TRUE)
   expect_error(leveldb_delete(db, "a", writeoptions = 1),
                "Expected an external pointer")
   expect_error(leveldb_delete(db, "a", writeoptions = null_pointer()),
@@ -98,25 +98,25 @@ test_that("writeoptions handle handles safely", {
 
 test_that("scalar_size", {
   path <- tempfile()
-  expect_error(leveldb_connect(path, max_open_files = -1),
+  expect_error(leveldb_open(path, max_open_files = -1),
                "Expected a positive size")
   ## special values:
-  expect_error(leveldb_connect(path, max_open_files = NA_real_),
+  expect_error(leveldb_open(path, max_open_files = NA_real_),
                "Expected a non-missing")
-  expect_error(leveldb_connect(path, max_open_files = Inf),
+  expect_error(leveldb_open(path, max_open_files = Inf),
                "Expected a non-missing")
-  expect_error(leveldb_connect(path, max_open_files = NA_integer_),
+  expect_error(leveldb_open(path, max_open_files = NA_integer_),
                "Expected a non-missing")
   ## other
-  expect_error(leveldb_connect(path, max_open_files = "a"),
+  expect_error(leveldb_open(path, max_open_files = "a"),
                "Expected a scalar size")
-  expect_error(leveldb_connect(path, max_open_files = c(10, 20)),
+  expect_error(leveldb_open(path, max_open_files = c(10, 20)),
                "Expected a scalar size")
 })
 
 test_that("get_keys_data", {
   path <- tempfile()
-  db <- leveldb_connect(path, create_if_missing = TRUE)
+  db <- leveldb_open(path, create_if_missing = TRUE)
   leveldb_approximate_sizes(db, raw(0), raw(255))
 
   expect_error(leveldb_approximate_sizes(db, "a", character(0)),
