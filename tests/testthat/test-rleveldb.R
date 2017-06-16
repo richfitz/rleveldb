@@ -280,3 +280,19 @@ test_that("cleanup", {
   db <- leveldb_connect(tempfile(), create_if_missing = TRUE)
   expect_false(leveldb_exists(db, "a"))
 })
+
+test_that("mget", {
+  db <- leveldb_connect(tempfile(), create_if_missing = TRUE)
+
+  leveldb_put(db, "foo", "bar")
+  expect_equal(leveldb_get(db, "foo"), "bar")
+
+  leveldb_mget(db, "foo", FALSE, NA_character_)
+  leveldb_mget(db, "foo", FALSE, NULL)
+  expect_error(leveldb_mget(db, "foo", FALSE, 1),
+               "missing must be a scalar character")
+  expect_equal(leveldb_mget(db, c("foo", "bar"), FALSE),
+               structure(c("bar", NA), missing = 2))
+  expect_equal(leveldb_mget(db, c("foo", "bar"), FALSE, report_missing = FALSE),
+               c("bar", NA))
+})

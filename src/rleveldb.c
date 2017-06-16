@@ -211,18 +211,29 @@ SEXP rleveldb_get(SEXP r_db, SEXP r_key, SEXP r_as_raw,
 }
 
 SEXP rleveldb_mget(SEXP r_db, SEXP r_key, SEXP r_as_raw,
-                   SEXP r_missing, SEXP r_readoptions) {
+                   SEXP r_missing, SEXP r_readoptions, SEXP r_report_missing) {
   leveldb_t *db = rleveldb_get_db(r_db, true);
   leveldb_readoptions_t *readoptions =
     rleveldb_get_readoptions(r_readoptions, true);
   return_as as_raw = to_return_as(r_as_raw);
+  bool report_missing = scalar_logical(r_report_missing);
+  if (as_raw == AS_STRING) {
+    if (r_missing == R_NilValue) {
+      r_missing = NA_STRING;
+    } else if (TYPEOF(r_missing) != STRSXP || length(r_missing) != 1) {
+      Rf_error("If as_raw = TRUE, missing must be a scalar character");
+    } else {
+      r_missing = STRING_ELT(r_missing, 0);
+    }
+  }
 
   const char **key_data = NULL;
   size_t *key_len = NULL;
   size_t num_key = get_keys(r_key, &key_data, &key_len);
   bool *missing = NULL;
 
-  SEXP ret = PROTECT(allocVector(VECSXP, num_key));
+  SEXPTYPE ret_type = as_raw == AS_STRING ? STRSXP : VECSXP;
+  SEXP ret = PROTECT(allocVector(ret_type, num_key));
 
   size_t n_missing = 0;
   for (size_t i = 0; i < num_key; ++i) {
@@ -232,16 +243,28 @@ SEXP rleveldb_mget(SEXP r_db, SEXP r_key, SEXP r_as_raw,
                              &read_len, &err);
     rleveldb_handle_error(err);
     if (read != NULL) {
-      SET_VECTOR_ELT(ret, i, raw_string_to_sexp(read, read_len, as_raw));
-      leveldb_free(read);
-    } else {
-      SET_VECTOR_ELT(ret, i, r_missing);
-      n_missing++;
-      if (missing == NULL) {
-        missing = (bool*) R_alloc(num_key, sizeof(bool));
-        memset(missing, 0, num_key * sizeof(bool));
+      SEXP el = PROTECT(raw_string_to_sexp(read, read_len, as_raw));
+      if (as_raw == AS_STRING) {
+        SET_STRING_ELT(ret, i, STRING_ELT(el, 0));
+      } else {
+        SET_VECTOR_ELT(ret, i, el);
       }
-      missing[i] = true;
+      leveldb_free(read);
+      UNPROTECT(1);
+    } else {
+      if (as_raw == AS_STRING) {
+        SET_STRING_ELT(ret, i, r_missing);
+      } else {
+        SET_VECTOR_ELT(ret, i, r_missing);
+      }
+      if (report_missing) {
+        n_missing++;
+        if (missing == NULL) {
+          missing = (bool*) R_alloc(num_key, sizeof(bool));
+          memset(missing, 0, num_key * sizeof(bool));
+        }
+        missing[i] = true;
+      }
     }
   }
 
