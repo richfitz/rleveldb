@@ -59,12 +59,12 @@
 ##'   "filter policy" to reduce disk reads.  A good value for
 ##'   bits_per_key // is 10, which yields a filter with ~ 1% false
 ##'   positive rate.  Further information from the LevelDB headers
-##'   (filter_policy.h) \dquote{This object is responsible for
+##'   (filter_policy.h) "This object is responsible for
 ##'   creating a small filter from a set of keys.  These filters are
 ##'   stored in leveldb and are consulted automatically by leveldb to
 ##'   decide whether or not to read some information from disk. In
 ##'   many cases, a filter can cut down the number of disk seeks form
-##'   a handful to a single disk seek per DB::Get() call}
+##'   a handful to a single disk seek per DB::Get() call"
 ##' @export
 ##' @author Rich FitzJohn
 ##' @useDynLib rleveldb, .registration = TRUE
